@@ -57,40 +57,68 @@ class JinaService {
 		}
 	}
 
-	static async processDocument(file: File): Promise<{ 
-		content: string; 
+	static async processDocument(file: File): Promise<{
+		content: string;
 		embeddings: number[];
 		metadata: DocumentMetadata;
 	}> {
 		try {
-			const isImage = file.type.startsWith('image/');
+			// Get embeddings instance
+			const embeddings = await this.getInstance();
+
+			// Process based on file type
 			let content: string;
-			let embeddings: number[];
+			if (file.type.startsWith('image/')) {
+				try {
+					const buffer = await file.arrayBuffer();
+					const base64 = Buffer.from(buffer).toString('base64');
+					content = `data:${file.type};base64,${base64}`;
+					const imageEmbeddings = await embeddings.embedQuery({ image: content });
 
-			if (isImage) {
-				const arrayBuffer = await file.arrayBuffer();
-				const base64 = Buffer.from(arrayBuffer).toString('base64');
-				content = base64;
-				embeddings = await this.generateEmbeddings({ image: `data:${file.type};base64,${base64}` });
+					return {
+						content,
+						embeddings: imageEmbeddings,
+						metadata: {
+							size: file.size,
+							lastModified: new Date(file.lastModified).toISOString(),
+							fileType: file.type,
+							embeddingDimension: imageEmbeddings.length,
+							processedAt: new Date().toISOString(),
+							previousVersions: [],
+							isImage: true
+						}
+					};
+				} catch (error) {
+					console.error('Error processing image:', error);
+					throw new Error(`Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+				}
 			} else {
-				content = await file.text();
-				embeddings = await this.generateEmbeddings(content);
+				try {
+					content = await file.text();
+					const textEmbeddings = await embeddings.embedQuery(content);
+
+					return {
+						content,
+						embeddings: textEmbeddings,
+						metadata: {
+							size: file.size,
+							lastModified: new Date(file.lastModified).toISOString(),
+							fileType: file.type,
+							embeddingDimension: textEmbeddings.length,
+							processedAt: new Date().toISOString(),
+							previousVersions: []
+						}
+					};
+				} catch (error) {
+					console.error('Error processing text:', error);
+					throw new Error(`Failed to process text: ${error instanceof Error ? error.message : 'Unknown error'}`);
+				}
 			}
-
-			const metadata: DocumentMetadata = {
-				size: file.size,
-				lastModified: new Date(file.lastModified).toISOString(),
-				fileType: file.type,
-				embeddingDimension: embeddings.length,
-				processedAt: new Date().toISOString(),
-				previousVersions: [],
-				isImage
-			};
-
-			return { content, embeddings, metadata };
 		} catch (error) {
-			console.error('Failed to process document:', error);
-			throw error;
+			console.error('Error in JinaService.processDocument:', error);
+			throw new Error(
+				`Document processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
 		}
 	}
 

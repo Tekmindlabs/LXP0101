@@ -4,14 +4,13 @@ export class JinaClient {
 	static async generateEmbeddings(input: string | { image: string }): Promise<number[]> {
 		const response = await fetch('/api/embeddings', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ input }),
 		});
 
 		if (!response.ok) {
-			throw new Error('Failed to generate embeddings');
+			const errorData = await response.json();
+			throw new Error(errorData.error || 'Failed to generate embeddings');
 		}
 
 		const data = await response.json();
@@ -26,16 +25,22 @@ export class JinaClient {
 		const formData = new FormData();
 		formData.append('file', file);
 
-		const response = await fetch('/api/process-document', {
-			method: 'POST',
-			body: formData,
-		});
+		try {
+			const response = await fetch('/api/process-document', {
+				method: 'POST',
+				body: formData,
+			});
 
-		if (!response.ok) {
-			throw new Error('Failed to process document');
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to process document');
+			}
+
+			return response.json();
+		} catch (error) {
+			console.error('Document processing error:', error);
+			throw error;
 		}
-
-		return response.json();
 	}
 
 	static async updateDocument(
@@ -50,15 +55,21 @@ export class JinaClient {
 		formData.append('file', file);
 		formData.append('previousMetadata', JSON.stringify(previousMetadata));
 
-		const response = await fetch('/api/update-document', {
-			method: 'POST',
-			body: formData,
-		});
+		try {
+			const response = await fetch('/api/update-document', {
+				method: 'POST',
+				body: formData,
+			});
 
-		if (!response.ok) {
-			throw new Error('Failed to update document');
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to update document');
+			}
+
+			return response.json();
+		} catch (error) {
+			console.error('Document update error:', error);
+			throw error;
 		}
-
-		return response.json();
 	}
 }
