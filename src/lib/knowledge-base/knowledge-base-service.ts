@@ -1,5 +1,6 @@
 import { lanceDbClient } from '../vectorDb/lance';
-import { Document, Folder, KnowledgeBase, SearchResult, DocumentMetadata, JsonValue } from './types';
+import { Document, Folder, KnowledgeBase, SearchResult, DocumentMetadata } from './types';
+import { Prisma } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import { embeddingService } from './embedding-service';
 import { DocumentProcessor } from './document-processor';
@@ -66,14 +67,20 @@ export class KnowledgeBaseService {
 	}
 
 	async createFolder(data: { name: string; knowledgeBaseId: string; parentId?: string }): Promise<Folder> {
-		return await this.prisma.folder.create({
+		const folder = await this.prisma.folder.create({
 			data: {
 				id: nanoid(),
 				...data,
+				metadata: Prisma.JsonNull,
 				createdAt: new Date(),
 				updatedAt: new Date()
 			}
 		});
+		
+		return {
+			...folder,
+			metadata: folder.metadata as Record<string, any> | null
+		};
 	}
 
 	async addDocument(
@@ -93,7 +100,7 @@ export class KnowledgeBaseService {
 				title: file.name,
 				type: file.type,
 				content: processedDoc.content,
-				metadata: processedDoc.metadata as JsonValue,
+				metadata: processedDoc.metadata as Prisma.InputJsonValue,
 				embeddings: processedDoc.embeddings,
 				folderId,
 				knowledgeBaseId,
@@ -152,7 +159,7 @@ export class KnowledgeBaseService {
 			where: { id: documentId },
 			data: {
 				content: processedDoc.content,
-				metadata: processedDoc.metadata as JsonValue,
+				metadata: processedDoc.metadata as Prisma.InputJsonValue,
 				embeddings: processedDoc.embeddings,
 				updatedAt: new Date()
 			}

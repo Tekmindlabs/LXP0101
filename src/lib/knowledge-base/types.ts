@@ -11,6 +11,7 @@ export interface DocumentMetadata {
 	processedAt: string;
 	previousVersions: VersionInfo[];
 	chunks?: number;
+	isImage?: boolean;
 	[key: string]: any; // Allow additional metadata fields
 }
 
@@ -18,7 +19,7 @@ export interface Document {
 	id: string;
 	title: string;
 	type: string;
-	content: string;
+	content: string; // Base64 string for images, text content for documents
 	metadata: DocumentMetadata;
 	embeddings: number[];
 	folderId: string;
@@ -52,7 +53,7 @@ export interface SearchResult {
 }
 
 export interface ProcessedDocument {
-	content: string;
+	content: string; // Base64 string for images, text content for documents
 	embeddings: number[];
 	metadata: DocumentMetadata;
 }
