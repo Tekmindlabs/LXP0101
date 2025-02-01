@@ -1,4 +1,4 @@
-import JinaService from './jina';
+import { JinaClient } from './jina-client';
 import { ProcessedDocument, DocumentMetadata } from './types';
 
 export class EmbeddingService {
@@ -14,11 +14,11 @@ export class EmbeddingService {
 		return this.instance;
 	}
 
-	async embedText(text: string): Promise<number[]> {
-		return JinaService.generateEmbeddings(text);
+	async embedText(input: string | { image: string }): Promise<number[]> {
+		return JinaClient.generateEmbeddings(input);
 	}
 
-	async embedChunks(chunks: string[]): Promise<number[][]> {
+	async embedChunks(chunks: (string | { image: string })[]): Promise<number[][]> {
 		const embeddings: number[][] = [];
 		
 		// Process chunks in batches
@@ -33,11 +33,11 @@ export class EmbeddingService {
 	}
 
 	async processDocument(file: File): Promise<ProcessedDocument> {
-		return JinaService.processDocument(file);
+		return JinaClient.processDocument(file);
 	}
 
 	async updateDocument(file: File, previousMetadata: DocumentMetadata): Promise<ProcessedDocument> {
-		return JinaService.updateDocument(file, previousMetadata);
+		return JinaClient.updateDocument(file, previousMetadata);
 	}
 
 	async processDocumentBatch(files: File[]): Promise<ProcessedDocument[]> {
