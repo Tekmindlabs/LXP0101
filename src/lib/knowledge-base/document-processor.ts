@@ -1,16 +1,25 @@
 import { ProcessedDocument, DocumentMetadata } from './types';
-import { embeddingService } from './embedding-service';
-import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
+import * as pdfjsLib from 'pdfjs-dist';
 
 export class DocumentProcessor {
 	private static readonly DEFAULT_CHUNK_SIZE = 1000;
 	private static readonly DEFAULT_CHUNK_OVERLAP = 200;
+	private static isInitialized = false;
+
+	private static async initialize() {
+		if (!this.isInitialized) {
+			const workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+			pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+			this.isInitialized = true;
+		}
+	}
 
 	static async extractText(file: File): Promise<string> {
 		const fileType = file.type.toLowerCase();
 		
 		if (fileType === 'application/pdf') {
+			await this.initialize();
 			const arrayBuffer = await file.arrayBuffer();
 			const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 			let text = '';
@@ -22,7 +31,7 @@ export class DocumentProcessor {
 			}
 			
 			return text.trim();
-		} 
+		}
 		
 		if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
 			const arrayBuffer = await file.arrayBuffer();
@@ -57,29 +66,51 @@ export class DocumentProcessor {
 	static async processDocument(file: File): Promise<ProcessedDocument> {
 		const content = await this.extractText(file);
 		const chunks = this.chunkText(content);
-		const processedDoc = await embeddingService.processDocument(file);
 		
-		const updatedMetadata: DocumentMetadata = {
-			...processedDoc.metadata,
+		const metadata: DocumentMetadata = {
+			size: file.size,
+			lastModified: new Date(file.lastModified).toISOString(),
+			fileType: file.type,
+			embeddingDimension: 0, // This will be updated by the embedding service
+			processedAt: new Date().toISOString(),
+			previousVersions: [],
 			chunks: chunks.length
 		};
 
 		return {
 			content,
-			embeddings: processedDoc.embeddings,
-			metadata: updatedMetadata
+			embeddings: [], // This will be updated by the embedding service
+			metadata
 		};
 	}
 
-	static async updateDocument(
-		file: File,
-		previousMetadata: DocumentMetadata
-	): Promise<ProcessedDocument> {
-		return embeddingService.updateDocument(file, previousMetadata);
+	static async updateDocument(file: File, previousMetadata: DocumentMetadata): Promise<ProcessedDocument> {
+		const content = await this.extractText(file);
+		const chunks = this.chunkText(content);
+		
+		const metadata: DocumentMetadata = {
+			...previousMetadata,
+			size: file.size,
+			lastModified: new Date(file.lastModified).toISOString(),
+			processedAt: new Date().toISOString(),
+			chunks: chunks.length,
+			previousVersions: [
+				...previousMetadata.previousVersions,
+				{
+					timestamp: previousMetadata.lastModified,
+					size: previousMetadata.size
+				}
+			]
+		};
+
+		return {
+			content,
+			embeddings: [], // This will be updated by the embedding service
+			metadata
+		};
 	}
 
 	static async processDocumentBatch(files: File[]): Promise<ProcessedDocument[]> {
 		return Promise.all(files.map(file => this.processDocument(file)));
 	}
-
 }

@@ -26,24 +26,40 @@ class JinaService {
 	private static isInitializing = false;
 
 	private static async getInstance(): Promise<JinaEmbeddings> {
-		if (!this.instance && !this.isInitializing) {
-			this.isInitializing = true;
+		if (this.instance) {
+			return this.instance;
+		}
+
+		if (this.isInitializing) {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			return this.getInstance();
+		}
+
+		this.isInitializing = true;
+		try {
+			if (!env.JINA_API_KEY) {
+				throw new Error('JINA_API_KEY environment variable is not set');
+			}
+
+			this.instance = new JinaEmbeddings({
+				apiKey: env.JINA_API_KEY,
+				model: "jina-clip-v2", // Use the correct model name
+				timeout: 30000, // 30 seconds timeout
+			});
+
+			// Test the instance with a simple query to ensure it works
 			try {
-				if (!env.JINA_API_KEY) {
-					throw new Error('JINA_API_KEY environment variable is not set');
-				}
-				this.instance = new JinaEmbeddings({
-					apiKey: env.JINA_API_KEY,
-					model: env.JINA_MODEL_NAME || "jina-embeddings-v2-base-en"
-				});
+				await this.instance.embedQuery("test");
 			} catch (error) {
 				console.error('Failed to initialize Jina embeddings:', error);
-				throw error;
-			} finally {
-				this.isInitializing = false;
+				this.instance = null;
+				throw new Error(`Failed to initialize Jina embeddings: ${error instanceof Error ? error.message : 'Unknown error'}`);
 			}
+
+			return this.instance;
+		} finally {
+			this.isInitializing = false;
 		}
-		return this.instance!;
 	}
 
 	static async generateEmbeddings(input: string | { image: string }): Promise<number[]> {

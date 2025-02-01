@@ -15,6 +15,15 @@ const nextConfig = {
       };
     }
 
+    // PDF.js worker configuration
+    config.module.rules.push({
+      test: /pdf\.worker\.(min\.)?js/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/worker/[hash][ext][query]'
+      }
+    });
+
     // Improved .node file handling
     config.module.rules.push({
       test: /\.node$/,
@@ -63,5 +72,6 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
 
 

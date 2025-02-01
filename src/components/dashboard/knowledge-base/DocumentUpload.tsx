@@ -7,6 +7,8 @@ import { DocumentProcessor } from '@/lib/knowledge-base/document-processor';
 import { useToast } from '@/hooks/use-toast';
 import { ProcessedDocument } from '@/lib/knowledge-base/types';
 
+const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+
 interface DocumentUploadProps {
 	onUpload: (processedDoc: ProcessedDocument) => Promise<void>;
 	folderId: string;
@@ -23,8 +25,22 @@ export function DocumentUpload({ onUpload, folderId }: DocumentUploadProps) {
 
 		try {
 			setIsUploading(true);
-			const processedDoc = await DocumentProcessor.processDocument(file);
+			const formData = new FormData();
+			formData.append('file', file);
+			
+			const response = await fetch(`${BASE_URL}/api/process-document`, {
+				method: 'POST',
+				body: formData,
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to process document');
+			}
+
+			const processedDoc = await response.json();
 			await onUpload(processedDoc);
+			
 			toast({
 				title: "Success",
 				description: "Document uploaded and processed successfully",
@@ -33,7 +49,7 @@ export function DocumentUpload({ onUpload, folderId }: DocumentUploadProps) {
 			console.error('Upload failed:', error);
 			toast({
 				title: "Error",
-				description: "Failed to upload document",
+				description: error instanceof Error ? error.message : "Failed to upload document",
 				variant: "destructive",
 			});
 		} finally {

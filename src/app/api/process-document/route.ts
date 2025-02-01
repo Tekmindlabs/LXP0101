@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import JinaService from '@/lib/knowledge-base/jina.server';
+import { DocumentProcessor } from '@/lib/knowledge-base/document-processor';
 
 export async function POST(req: Request) {
 	try {
@@ -13,8 +13,7 @@ export async function POST(req: Request) {
 			);
 		}
 
-		// Add file validation
-		const validTypes = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png'];
+		const validTypes = ['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 		if (!validTypes.includes(file.type)) {
 			return NextResponse.json(
 				{ error: `Unsupported file type: ${file.type}. Supported types: ${validTypes.join(', ')}` },
@@ -22,7 +21,6 @@ export async function POST(req: Request) {
 			);
 		}
 
-		// Add size validation (10MB limit)
 		const MAX_SIZE = 10 * 1024 * 1024;
 		if (file.size > MAX_SIZE) {
 			return NextResponse.json(
@@ -32,12 +30,18 @@ export async function POST(req: Request) {
 		}
 
 		try {
-			const result = await JinaService.processDocument(file);
-			return NextResponse.json(result);
+			const processedDoc = await DocumentProcessor.processDocument(file);
+			return NextResponse.json(processedDoc);
 		} catch (error) {
-			console.error('JinaService processing error:', error);
+			console.error('Document processing error:', error);
+			const errorMessage = error instanceof Error ? error.message : 'Failed to process document';
+			
 			return NextResponse.json(
-				{ error: error instanceof Error ? error.message : 'Failed to process document' },
+				{ 
+					error: errorMessage,
+					type: file.type,
+					size: file.size
+				},
 				{ status: 500 }
 			);
 		}

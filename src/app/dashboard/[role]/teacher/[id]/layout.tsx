@@ -1,22 +1,24 @@
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink } from "@/components/ui/breadcrumb";
 import { ChevronRight } from "lucide-react";
 
-export default function TeacherProfileLayout({
+export default async function TeacherProfileLayout({
 	children,
 	params,
 }: {
 	children: React.ReactNode;
 	params: { role: string; id: string };
 }) {
+	const roleParam = await Promise.resolve(params.role);
+
 	return (
 		<div className="space-y-6">
 			<Breadcrumb>
 				<BreadcrumbItem>
-					<BreadcrumbLink href={`/dashboard/${params.role}`}>Dashboard</BreadcrumbLink>
+					<BreadcrumbLink href={`/dashboard/${roleParam}`}>Dashboard</BreadcrumbLink>
 				</BreadcrumbItem>
 				<BreadcrumbItem>
 					<ChevronRight className="h-4 w-4" />
-					<BreadcrumbLink href={`/dashboard/${params.role}/teachers`}>Teachers</BreadcrumbLink>
+					<BreadcrumbLink href={`/dashboard/${roleParam}/teachers`}>Teachers</BreadcrumbLink>
 				</BreadcrumbItem>
 				<BreadcrumbItem>
 					<ChevronRight className="h-4 w-4" />

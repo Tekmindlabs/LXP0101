@@ -180,14 +180,18 @@ export default async function RoleLayout({
 		redirect("/auth/signin");
 	}
 
+// Ensure params.role is properly handled
+const validateRole = async (userRoles: string[], role: string) => {
+	const currentRole = role.toLowerCase();
+	if (!userRoles.includes(currentRole)) {
+		redirect(`/dashboard/${userRoles[0].toLowerCase()}`);
+	}
+	return currentRole;
+};
+
 const userRoles = session.user.roles.map((r) => r.toLowerCase());
-const currentRole = params.role?.toLowerCase() || '';
+const currentRole = await validateRole(userRoles, params.role);
 
-if (!userRoles.includes(currentRole)) {
-	redirect(`/dashboard/${session.user.roles[0].toLowerCase()}`);
-}
-
-// Get nav items based on role
 const getNavItems = (role: string) => {
 	switch (role) {
 		case 'super-admin':

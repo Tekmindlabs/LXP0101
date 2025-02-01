@@ -17,22 +17,23 @@ export default async function RoleDashboard({
 }) {
   const session = await getServerAuthSession();
   // Await the role parameter
-  const role = await Promise.resolve(params.role);
-
+  const roleParam = await Promise.resolve(params.role);
+  
   // Normalize the role to uppercase and replace hyphens with underscores
-  const normalizedRole = params.role.toUpperCase().replace(/-/g, '_');
+  const normalizedRole = roleParam.toUpperCase().replace(/-/g, '_');
+  
   if (!session?.user) {
     redirect('/auth/signin');
   }
 
   // Check if user has the required role (case-insensitive)
   const userRoles = session.user.roles.map(r => r.toLowerCase());
-  if (!userRoles.includes(role.toLowerCase())) {
+  if (!userRoles.includes(roleParam.toLowerCase())) {
     redirect(`/dashboard/${session.user.roles[0]}`);
   }
 
   // If the role is coordinator, render the coordinator dashboard
-  if (role.toLowerCase() === 'coordinator') {
+  if (roleParam.toLowerCase() === 'coordinator') {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">

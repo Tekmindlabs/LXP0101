@@ -15,7 +15,7 @@ export const env = createEnv({
     STORAGE_DIR: z.string().min(1),
     JINA_API_KEY: z.string().min(1),
     JINA_BASE_URL: z.string().url(),
-    JINA_MODEL_NAME: z.string().min(1),
+    JINA_MODEL_NAME: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
