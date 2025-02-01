@@ -56,19 +56,36 @@ export const knowledgeBaseRouter = createTRPCRouter({
 			return await knowledgeBaseService.createFolder(input);
 		}),
 
-	uploadDocument: protectedProcedure
+		uploadDocument: protectedProcedure
 		.input(z.object({
-			processedDoc: ProcessedDocumentSchema,
+			file: z.object({
+				name: z.string(),
+				type: z.string(),
+				size: z.number(),
+				lastModified: z.number(),
+				content: z.string()  // We'll pass the file content directly
+			}),
 			knowledgeBaseId: z.string(),
 			folderId: z.string()
 		}))
 		.mutation(async ({ input }) => {
+			// Create a File object from the input
+			const file = new File(
+				[input.file.content],
+				input.file.name,
+				{
+					type: input.file.type,
+					lastModified: input.file.lastModified
+				}
+			);
+			
 			return await knowledgeBaseService.addDocument(
-				input.processedDoc,
+				file,
 				input.folderId,
 				input.knowledgeBaseId
 			);
 		}),
+
 
 
 	searchDocuments: protectedProcedure

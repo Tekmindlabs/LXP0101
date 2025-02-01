@@ -7,10 +7,18 @@ import { DocumentProcessor } from '@/lib/knowledge-base/document-processor';
 import { useToast } from '@/hooks/use-toast';
 import { ProcessedDocument } from '@/lib/knowledge-base/types';
 
+export type FileWithContent = {
+	name: string;
+	type: string;
+	size: number;
+	lastModified: number;
+	content: string;
+};
+
 const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
 
 interface DocumentUploadProps {
-	onUpload: (processedDoc: ProcessedDocument) => Promise<void>;
+	onUpload: (processedDoc: ProcessedDocument & { file: FileWithContent }) => Promise<void>;
 	folderId: string;
 }
 
@@ -39,7 +47,18 @@ export function DocumentUpload({ onUpload, folderId }: DocumentUploadProps) {
 			}
 
 			const processedDoc = await response.json();
-			await onUpload(processedDoc);
+			const content = await file.text(); // Read file content
+
+			await onUpload({
+				...processedDoc,
+				file: {
+					name: file.name,
+					type: file.type,
+					size: file.size,
+					lastModified: file.lastModified,
+					content
+				}
+			});
 			
 			toast({
 				title: "Success",

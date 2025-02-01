@@ -84,10 +84,14 @@ export class KnowledgeBaseService {
 	}
 
 	async addDocument(
-		file: File, 
+		file: File | undefined | null, 
 		folderId: string,
 		knowledgeBaseId: string
 	): Promise<Document> {
+		if (!file) {
+			throw new Error('File is required');
+		}
+
 		const now = new Date();
 		const id = nanoid();
 
@@ -127,8 +131,12 @@ export class KnowledgeBaseService {
 
 	async updateDocument(
 		documentId: string,
-		file: File
+		file: File | undefined | null
 	): Promise<Document> {
+		if (!file) {
+			throw new Error('File is required');
+		}
+
 		const existingDoc = await this.prisma.document.findUnique({
 			where: { id: documentId }
 		});

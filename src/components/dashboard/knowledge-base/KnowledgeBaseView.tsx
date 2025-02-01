@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { api } from '@/utils/api';
 import { DocumentList } from './DocumentList';
 import { FolderTree } from './FolderTree';
-import { DocumentUpload } from './DocumentUpload';
+import { DocumentUpload, FileWithContent } from './DocumentUpload';
 import { Document, Folder, ProcessedDocument } from '@/lib/knowledge-base/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -67,11 +67,11 @@ export function KnowledgeBaseView() {
 		}
 	});
 
-	const handleUpload = async (processedDoc: ProcessedDocument) => {
+	const handleUpload = async (processedDoc: ProcessedDocument & { file: FileWithContent }) => {
 		if (!selectedFolder || !knowledgeBase) return;
 		
 		await uploadMutation.mutateAsync({
-			processedDoc,
+			file: processedDoc.file,
 			knowledgeBaseId: knowledgeBase.id,
 			folderId: selectedFolder.id
 		});

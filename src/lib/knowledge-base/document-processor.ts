@@ -21,7 +21,7 @@ export class DocumentProcessor {
 		if (fileType === 'application/pdf') {
 			await this.initialize();
 			const arrayBuffer = await file.arrayBuffer();
-			const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+			const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
 			let text = '';
 			
 			for (let i = 1; i <= pdf.numPages; i++) {
