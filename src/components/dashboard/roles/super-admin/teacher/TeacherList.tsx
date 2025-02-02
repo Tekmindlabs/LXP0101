@@ -4,33 +4,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Status, TeacherType } from "@prisma/client";
-
-interface Teacher {
-	id: string;
-	name: string;
-	email: string;
-	status: Status;
-	teacherProfile: {
-		teacherType: TeacherType;
-		specialization: string | null;
-		availability: string | null;
-		subjects: {
-			subject: {
-				name: string;
-			};
-		}[];
-		classes: {
-			class: {
-				name: string;
-				classGroup: {
-					name: string;
-				};
-			};
-		}[];
-	};
-}
+import { Teacher } from "@/types/user";
 
 interface TeacherListProps {
+
 	teachers: Teacher[];
 	onSelect: (id: string) => void;
 	onEdit: (id: string) => void;
@@ -56,8 +33,8 @@ export const TeacherList = ({ teachers, onSelect, onEdit }: TeacherListProps) =>
 				<TableBody>
 					{teachers.map((teacher) => (
 						<TableRow key={teacher.id}>
-							<TableCell>{teacher.name}</TableCell>
-							<TableCell>{teacher.email}</TableCell>
+							<TableCell>{teacher.name || '-'}</TableCell>
+							<TableCell>{teacher.email || '-'}</TableCell>
 							<TableCell>
 								<Badge variant="outline">
 									{teacher.teacherProfile?.teacherType || 'SUBJECT'}

@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BulkTeacherUpload } from "./BulkTeacherUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Status } from "@prisma/client";
 import { api } from "@/utils/api";
 import { TeacherList } from "./TeacherList";
+import { Teacher } from "@/types/user";
 
-
-// Define interfaces for the component
 interface Subject {
   id: string;
   name: string;
@@ -24,22 +25,8 @@ interface Class {
   };
 }
 
-interface TeacherProfile {
-  specialization: string | null;
-  availability: string | null;
-  subjects: { subject: { id: string; name: string } }[];
-  classes: { class: { id: string; name: string; classGroup: { name: string } } }[];
-}
-
-interface Teacher {
-  id: string;
-  name: string;
-  email: string;
-  status: Status;
-  teacherProfile: TeacherProfile | null;
-}
-
 interface SearchFilters {
+
   search: string;
   subjectId?: string;
   classId?: string;
@@ -47,7 +34,7 @@ interface SearchFilters {
 }
 
 
-export const TeacherManagement = () => {
+export const TeacherManagement = ({ role }: { role: string }) => {
   const router = useRouter();
   const [filters, setFilters] = useState<SearchFilters>({
 
@@ -81,7 +68,12 @@ export const TeacherManagement = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Teacher Management</CardTitle>
-          <Button onClick={handleCreate}>Create Teacher</Button>
+          <div className="flex items-center gap-4">
+          <BulkTeacherUpload />
+          <Button onClick={() => router.push(`/dashboard/${role}/teacher/create`)}>
+            Add Teacher
+          </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-6 space-y-4">
@@ -155,4 +147,3 @@ export const TeacherManagement = () => {
   );
 };
 
-export default TeacherManagement;

@@ -1,53 +1,57 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 
-
 const formSchema = z.object({
 	name: z.string().min(1, { message: 'Name is required' }),
-	email: z.string().email({ message: 'Invalid email address' }),
+	email: z.string().email({ message: 'Invalid email address' }).nullable(),
 	dateOfBirth: z.date({ message: 'Date of birth is required' }),
 	classId: z.string().min(1, { message: 'Class is required' }),
 });
 
 
+
 type FormData = z.infer<typeof formSchema>;
 
-export default function EditStudentPage() {
-	const params = useParams();
-	const studentId = params.studentId as string;
-	const role = params.role as string;
+export default function EditStudentPage({ params }: { params: { role: string; studentId: string } }) {
 	const router = useRouter();
 	const { toast } = useToast();
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	
 	const { data: classes = [] } = api.class.list.useQuery();
-	const { data: student } = api.student.getStudent.useQuery(studentId);
+	const { data: student, isLoading } = api.student.getStudent.useQuery(params.studentId);
+	
 	const updateStudentMutation = api.student.updateStudent.useMutation({
 		onSuccess: () => {
+			setIsSubmitting(false);
 			toast({
 				title: 'Student updated successfully',
 				description: 'Student has been updated',
 			});
-			router.push(`/dashboard/${role}/student`);
+			router.push(`/dashboard/${params.role}/student`);
 		},
-		onError: () => {
+		onError: (error) => {
+			setIsSubmitting(false);
 			toast({
 				title: 'Error',
-				description: 'Failed to update student',
+				description: error.message || 'Failed to update student',
 				variant: 'destructive',
 			});
 		},
 	});
+
 
 	const form = useForm<FormData>({
 		resolver: zodResolver(formSchema),
@@ -63,29 +67,97 @@ export default function EditStudentPage() {
 
 	useEffect(() => {
 		if (student && student.studentProfile) {
-			setValue('name', student.name || '');
-			setValue('email', student.email || '');
-			if (student.studentProfile.dateOfBirth) {
-				setValue('dateOfBirth', new Date(student.studentProfile.dateOfBirth));
-			}
-			if (student.studentProfile.classId) {
-				setValue('classId', student.studentProfile.classId);
-			}
+			form.reset({
+				name: student.name || '',
+				email: student.email || '',
+				dateOfBirth: student.studentProfile.dateOfBirth ? new Date(student.studentProfile.dateOfBirth) : new Date(),
+				classId: student.studentProfile.classId || '',
+			}, {
+				keepDefaultValues: false,
+			});
 		}
-	}, [student, setValue]);
+	}, [student, form]);
 
-	const onSubmit = (data: FormData) => {
-		updateStudentMutation.mutate({
-			id: studentId,
-			...data,
-		});
+	const onSubmit = async (data: FormData) => {
+		try {
+			setIsSubmitting(true);
+			await updateStudentMutation.mutateAsync({
+				id: params.studentId,
+				name: data.name,
+				email: data.email || null,
+				dateOfBirth: data.dateOfBirth,
+				classId: data.classId,
+			});
+		} catch (error) {
+			console.error('Error updating student:', error);
+			toast({
+				title: 'Error',
+				description: error instanceof Error ? error.message : 'Failed to update student',
+				variant: 'destructive',
+			});
+			setIsSubmitting(false);
+		}
 	};
 
 
+	const createCredentialsMutation = api.student.createCredentials.useMutation({
+		onSuccess: () => {
+			toast({
+				title: 'Credentials created successfully',
+				description: 'Login credentials have been created and sent',
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: 'Error',
+				description: 'Failed to create credentials: ' + error.message,
+				variant: 'destructive',
+			});
+		},
+	});
+
+	const handleCreateCredentials = () => {
+		if (!student?.email) {
+			toast({
+				title: 'Error',
+				description: 'Student must have an email address to create login credentials',
+				variant: 'destructive',
+			});
+			return;
+		}
+
+		const studentPassword = Math.random().toString(36).slice(-8);
+		const parentPassword = Math.random().toString(36).slice(-8);
+		
+		createCredentialsMutation.mutate({
+			studentId: params.studentId,
+			studentPassword,
+			parentPassword: student.studentProfile?.parent ? parentPassword : undefined
+		});
+	};
+
+	if (isLoading || !student) {
+		return <div>Loading...</div>;
+	}
+
+
+
+
 	return (
-		<div className="space-y-6">
-			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+		<div className="container mx-auto py-6">
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<CardTitle>Edit Student</CardTitle>
+					<Button 
+						onClick={handleCreateCredentials}
+						disabled={!student?.email || createCredentialsMutation.isPending}
+					>
+						{createCredentialsMutation.isPending ? 'Creating...' : 'Create Login Credentials'}
+					</Button>
+				</CardHeader>
+				<CardContent>
+					<Form {...form}>
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 					<div className="space-y-4">
 						<FormField
 							control={form.control}
@@ -108,7 +180,12 @@ export default function EditStudentPage() {
 								<div className="space-y-2">
 									<FormLabel>Email</FormLabel>
 									<FormControl>
-										<Input type="email" placeholder="Email" {...field} />
+										<Input 
+											type="email" 
+											placeholder="Email" 
+											{...field} 
+											value={field.value ?? ''} 
+										/>
 									</FormControl>
 									<FormMessage />
 								</div>
@@ -160,9 +237,16 @@ export default function EditStudentPage() {
 						/>
 					</div>
 
-					<Button type="submit">Update Student</Button>
+					<Button 
+						type="submit" 
+						disabled={isSubmitting || !form.formState.isValid}
+					>
+						{isSubmitting ? "Updating..." : "Update Student"}
+					</Button>
 				</form>
 			</Form>
-		</div>
+		</CardContent>
+	</Card>
+</div>
 	);
 }

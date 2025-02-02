@@ -1,3 +1,4 @@
+import { use } from 'react';
 import { redirect } from "next/navigation";
 import { getServerAuthSession } from "@/server/auth";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
@@ -175,16 +176,18 @@ export default async function RoleLayout({
 	params: { role: string };
 }) {
 	const session = await getServerAuthSession();
+	const roleParam = params.role;
 
 	if (!session) {
 		redirect("/auth/signin");
 	}
 
 	const userRoles = session.user.roles.map((r) => r.toLowerCase());
-	const role = params.role.toLowerCase();
+	const role = roleParam.toLowerCase();
 
 	if (!userRoles.includes(role)) {
 		redirect(`/dashboard/${userRoles[0].toLowerCase()}`);
+
 	}
 
 	const getNavItems = (role: string) => {

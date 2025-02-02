@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,11 +24,11 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export default function CreateStudentPage() {
+export default function CreateStudentPage({ params }: { params: { role: string } }) {
 	const router = useRouter();
-	const params = useParams();
-	const role = params.role as string;
+	const role = params.role;
 	const { toast } = useToast();
+
 	const [password, setPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
 	const [copied, setCopied] = useState(false);

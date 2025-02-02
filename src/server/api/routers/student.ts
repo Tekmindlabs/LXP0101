@@ -2,6 +2,23 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { Status, UserType } from "@prisma/client";
 import { generatePassword } from "../../../utils/password";
+import * as XLSX from 'xlsx';
+
+interface ExcelRow {
+	Name: string;
+	Email: string;
+	DateOfBirth: string;
+	ClassId?: string;
+	ParentEmail?: string;
+}
+
+const studentDataSchema = z.object({
+	name: z.string(),
+	email: z.string().email(),
+	dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+	classId: z.string().optional(),
+	parentEmail: z.string().email().optional(),
+});
 
 export const studentRouter = createTRPCRouter({
 	createStudent: protectedProcedure
@@ -165,29 +182,73 @@ export const studentRouter = createTRPCRouter({
 	updateStudent: protectedProcedure
 		.input(z.object({
 			id: z.string(),
-			name: z.string().optional(),
-			email: z.string().email().optional(),
-			dateOfBirth: z.date().optional(),
-			classId: z.string().optional(),
+			name: z.string(),
+			email: z.string().email().nullable(),
+			dateOfBirth: z.date(),
+			classId: z.string(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const student = await ctx.prisma.user.update({
-				where: { id: input.id },
-				data: {
-					name: input.name,
-					email: input.email,
-					studentProfile: {
-						update: {
-							dateOfBirth: input.dateOfBirth,
-							classId: input.classId,
+			try {
+				// Check if email exists (if provided and different from current)
+				if (input.email) {
+					const existingStudent = await ctx.prisma.user.findFirst({
+						where: { 
+							email: input.email,
+							id: { not: input.id }
+						}
+					});
+					if (existingStudent) {
+						throw new Error("Email already exists");
+					}
+				}
+
+				const student = await ctx.prisma.user.update({
+					where: { id: input.id },
+					data: {
+						name: input.name,
+						email: input.email,
+						studentProfile: {
+							update: {
+								dateOfBirth: input.dateOfBirth,
+								classId: input.classId,
+							},
 						},
 					},
-				},
-				include: {
-					studentProfile: true,
-				},
-			});
-			return student;
+					include: {
+						studentProfile: {
+							include: {
+								class: {
+									include: {
+										classGroup: {
+											include: {
+												program: true,
+											},
+										},
+									},
+								},
+								parent: {
+									include: {
+										user: true,
+									},
+								},
+								activities: true,
+								attendance: true,
+							},
+						},
+					},
+				});
+
+				if (!student.studentProfile) {
+					throw new Error("Student profile not found");
+				}
+
+				return student;
+			} catch (error) {
+				if (error instanceof Error) {
+					throw new Error(`Failed to update student: ${error.message}`);
+				}
+				throw new Error("Failed to update student");
+			}
 		}),
 
 
@@ -244,7 +305,7 @@ export const studentRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const { search, classId, programId, status } = input;
 
-			return ctx.prisma.user.findMany({
+			const students = await ctx.prisma.user.findMany({
 				where: {
 					userType: UserType.STUDENT,
 					...(search && {
@@ -282,11 +343,7 @@ export const studentRouter = createTRPCRouter({
 									user: true,
 								},
 							},
-							activities: {
-								include: {
-									activity: true,
-								},
-							},
+							activities: true,
 							attendance: true,
 						},
 					},
@@ -294,6 +351,39 @@ export const studentRouter = createTRPCRouter({
 				orderBy: {
 					name: 'asc',
 				},
+			});
+
+			// Transform the data to match the Student interface
+			return students.map(student => {
+				if (!student.studentProfile) {
+					throw new Error(`Student ${student.id} has no profile`);
+				}
+				
+				return {
+					id: student.id,
+					name: student.name || '',
+					email: student.email || '',
+					status: student.status,
+					studentProfile: {
+						dateOfBirth: student.studentProfile.dateOfBirth,
+						class: student.studentProfile.class ? {
+							name: student.studentProfile.class.name,
+							classGroup: {
+								name: student.studentProfile.class.classGroup.name,
+								program: {
+									name: student.studentProfile.class.classGroup.program.name,
+								},
+							},
+						} : null,
+						parent: student.studentProfile.parent ? {
+							user: {
+								name: student.studentProfile.parent.user.name || '',
+							},
+						} : null,
+						attendance: student.studentProfile.attendance || [],
+						activities: student.studentProfile.activities || [],
+					},
+				};
 			});
 		}),
 
@@ -435,5 +525,142 @@ export const studentRouter = createTRPCRouter({
 					subjects: subjectPerformance,
 				},
 			};
+		}),
+
+	createCredentials: protectedProcedure
+		.input(z.object({
+			studentId: z.string(),
+			studentPassword: z.string().min(6),
+			parentPassword: z.string().min(6).optional(),
+		}))
+		.mutation(async ({ ctx, input }) => {
+			const { studentId, studentPassword, parentPassword } = input;
+			
+			const student = await ctx.prisma.user.findFirst({
+				where: { 
+					id: studentId,
+					userType: UserType.STUDENT 
+				},
+				include: {
+					studentProfile: {
+						include: {
+							parent: {
+								include: {
+									user: true
+								}
+							}
+						}
+					}
+				}
+			});
+
+			if (!student) {
+				throw new Error("Student not found");
+			}
+
+			// Update student password
+			await ctx.prisma.user.update({
+				where: { id: studentId },
+				data: { password: studentPassword }
+			});
+
+			// Update parent password if provided and parent exists
+			if (parentPassword && student.studentProfile?.parent?.user) {
+				await ctx.prisma.user.update({
+					where: { id: student.studentProfile.parent.user.id },
+					data: { password: parentPassword }
+				});
+			}
+
+			return student;
+		}),
+
+	bulkUpload: protectedProcedure
+		.input(z.instanceof(FormData))
+		.mutation(async ({ ctx, input }) => {
+			const file = input.get("file") as File;
+			if (!file) throw new Error("No file provided");
+
+			const fileBuffer = await file.arrayBuffer();
+			const workbook = XLSX.read(fileBuffer, { type: 'array' });
+			const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+			const jsonData = XLSX.utils.sheet_to_json<ExcelRow>(worksheet);
+
+			if (jsonData.length > 500) {
+				throw new Error("Maximum 500 students allowed per upload");
+			}
+
+			const results = {
+				successful: 0,
+				failed: 0,
+				errors: [] as string[],
+			};
+
+			for (const row of jsonData) {
+				try {
+					const data = studentDataSchema.parse({
+						name: row.Name,
+						email: row.Email,
+						dateOfBirth: row.DateOfBirth,
+						classId: row.ClassId,
+						parentEmail: row.ParentEmail,
+					});
+
+					const studentPassword = generatePassword();
+					let parentData = null;
+
+					if (data.parentEmail) {
+						const existingParent = await ctx.prisma.user.findUnique({
+							where: { email: data.parentEmail },
+							include: { parentProfile: true },
+						});
+
+						if (!existingParent) {
+							const parentPassword = generatePassword();
+							const parent = await ctx.prisma.user.create({
+								data: {
+									email: data.parentEmail,
+									password: parentPassword,
+									userType: UserType.PARENT,
+									status: Status.ACTIVE,
+									parentProfile: {
+										create: {},
+									},
+								},
+								include: { parentProfile: true },
+							});
+							parentData = parent.parentProfile;
+						} else {
+							parentData = existingParent.parentProfile;
+						}
+					}
+
+					await ctx.prisma.user.create({
+						data: {
+							name: data.name,
+							email: data.email,
+							password: studentPassword,
+							userType: UserType.STUDENT,
+							status: Status.ACTIVE,
+							studentProfile: {
+								create: {
+									dateOfBirth: new Date(data.dateOfBirth),
+									classId: data.classId,
+									parentId: parentData?.id,
+								},
+							},
+						},
+					});
+
+					results.successful++;
+				} catch (error) {
+					results.failed++;
+					if (error instanceof Error) {
+						results.errors.push(`Row ${results.successful + results.failed}: ${error.message}`);
+					}
+				}
+			}
+
+			return results;
 		}),
 });

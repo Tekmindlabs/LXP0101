@@ -1,4 +1,4 @@
-import { Status } from "@prisma/client";
+import { Status, ActivityStatus, AttendanceStatus } from "@prisma/client";
 
 export enum TeacherType {
 	CLASS = "CLASS",
@@ -6,13 +6,12 @@ export enum TeacherType {
 }
 
 export interface Student {
-
 	id: string;
-	name: string;
-	email: string;
+	name: string | null;
+	email: string | null;
 	status: Status;
 	studentProfile: {
-		dateOfBirth: Date;
+		dateOfBirth: Date | null;
 		class?: {
 			name: string;
 			classGroup: {
@@ -21,40 +20,51 @@ export interface Student {
 					name: string | null;
 				};
 			};
-		};
+		} | null;
 		parent?: {
 			user: {
-				name: string;
+				name: string | null;
 			};
-		};
+		} | null;
 		attendance: {
-			status: string;
+			status: AttendanceStatus;
 		}[];
 		activities: {
-			status: string;
-			grade?: number;
+			status: ActivityStatus;
+			grade: number | null;
 		}[];
 	};
 }
 
+
 export interface Teacher {
 	id: string;
-	name: string;
-	email: string;
-	phoneNumber: string;
+	name: string | null;
+	email: string | null;
+	phoneNumber: string | null;
 	status: Status;
 	teacherProfile: {
 		teacherType: TeacherType;
 		specialization: string | null;
 		availability: string | null;
-		subjects: { subject: { id: string; name: string } }[];
-		classes: { 
-			class: { 
-				id: string; 
+		permissions: string[];
+		subjects: {
+			subject: {
+				id: string;
 				name: string;
-				classGroup: { name: string } 
 			};
+			status: Status;
+		}[];
+		classes: {
+			class: {
+				id: string;
+				name: string;
+				classGroup: {
+					name: string;
+				};
+			};
+			status: Status;
 			isClassTeacher: boolean;
 		}[];
-	};
+	} | null;
 }

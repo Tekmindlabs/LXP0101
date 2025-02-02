@@ -10,14 +10,14 @@ import { Overview } from "@/components/dashboard/coordinator/overview";
 import { RecentActivities } from "@/components/dashboard/coordinator/recent-activities";
 import { PerformanceMetrics } from "@/components/dashboard/coordinator/performance-metrics";
 
-export default async function RoleDashboard({
+export default async function DashboardPage({
   params,
 }: {
   params: { role: string };
 }) {
   const session = await getServerAuthSession();
-  // Await the role parameter
-  const roleParam = await Promise.resolve(params.role);
+  const roleParam = params.role;
+
   
   // Normalize the role to uppercase and replace hyphens with underscores
   const normalizedRole = roleParam.toUpperCase().replace(/-/g, '_');

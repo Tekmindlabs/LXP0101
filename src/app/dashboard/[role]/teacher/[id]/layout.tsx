@@ -1,14 +1,17 @@
+import { use } from 'react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink } from "@/components/ui/breadcrumb";
 import { ChevronRight } from "lucide-react";
 
-export default async function TeacherProfileLayout({
+export default function TeacherProfileLayout({
 	children,
 	params,
 }: {
 	children: React.ReactNode;
-	params: { role: string; id: string };
+	params: Promise<{ role: string; id: string }>;
 }) {
-	const roleParam = await Promise.resolve(params.role);
+	const { role: roleParam } = use(params);
+
+
 
 	return (
 		<div className="space-y-6">

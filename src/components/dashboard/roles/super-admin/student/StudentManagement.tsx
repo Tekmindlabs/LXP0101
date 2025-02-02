@@ -11,6 +11,7 @@ import { api } from "@/utils/api";
 import { StudentList } from "./StudentList";
 import { StudentForm } from "./StudentForm";
 import { StudentDetails } from "./StudentDetails";
+import { BulkStudentUpload } from "./BulkStudentUpload";
 
 interface SearchFilters {
 	search: string;
@@ -46,9 +47,12 @@ export const StudentManagement = () => {
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle>Student Management</CardTitle>
-					<Button onClick={() => router.push(`/dashboard/${role}/student/create`)}>
-						Enroll Student
-					</Button>
+					<div className="flex items-center gap-4">
+						<BulkStudentUpload />
+						<Button onClick={() => router.push(`/dashboard/${role}/student/create`)}>
+							Enroll Student
+						</Button>
+					</div>
 				</CardHeader>
 				<CardContent>
 					<div className="mb-6 space-y-4">

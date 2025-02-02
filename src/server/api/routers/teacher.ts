@@ -1,6 +1,30 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { Status, UserType, type Prisma } from "@prisma/client";
+import * as XLSX from 'xlsx';
+import { generatePassword } from "../../../utils/password";
+
+// Excel row data interface
+interface ExcelRow {
+	Name: string;
+	Email: string;
+	PhoneNumber: string;
+	TeacherType: string;
+	Specialization?: string;
+	SubjectIds?: string;
+	ClassIds?: string;
+}
+
+// Schema for teacher data validation
+const teacherDataSchema = z.object({
+	name: z.string(),
+	email: z.string().email(),
+	phoneNumber: z.string(),
+	teacherType: z.enum(['CLASS', 'SUBJECT']),
+	specialization: z.string().optional(),
+	subjectIds: z.array(z.string()).optional(),
+	classIds: z.array(z.string()).optional(),
+});
 
 // Define TeacherType enum since it's not in Prisma client
 export enum TeacherType {
@@ -349,4 +373,109 @@ export const teacherRouter = createTRPCRouter({
 				},
 			});
 		}),
+
+	createCredentials: protectedProcedure
+		.input(z.object({
+			teacherId: z.string(),
+			password: z.string().min(6),
+		}))
+		.mutation(async ({ ctx, input }) => {
+			const { teacherId, password } = input;
+			
+			const teacher = await ctx.prisma.user.findFirst({
+				where: { 
+					id: teacherId,
+					userType: UserType.TEACHER 
+				},
+			});
+
+			if (!teacher) {
+				throw new Error("Teacher not found");
+			}
+
+			return ctx.prisma.user.update({
+				where: { id: teacherId },
+				data: {
+					password: password, // Note: In production, ensure password is properly hashed
+				},
+			});
+		}),  // end of createCredentials
+
+	bulkUpload: protectedProcedure
+		.input(z.instanceof(FormData))
+		.mutation(async ({ ctx, input }) => {
+			const file = input.get("file") as File;
+			if (!file) throw new Error("No file provided");
+
+			const fileBuffer = await file.arrayBuffer();
+			const workbook = XLSX.read(fileBuffer, { type: 'array' });
+			const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+			const jsonData = XLSX.utils.sheet_to_json<ExcelRow>(worksheet);
+
+			if (jsonData.length > 500) {
+				throw new Error("Maximum 500 teachers allowed per upload");
+			}
+
+			const results = {
+				successful: 0,
+				failed: 0,
+				errors: [] as string[],
+			};
+
+			for (const row of jsonData) {
+				try {
+					const data = teacherDataSchema.parse({
+						name: row.Name,
+						email: row.Email,
+						phoneNumber: row.PhoneNumber,
+						teacherType: row.TeacherType as 'CLASS' | 'SUBJECT',
+						specialization: row.Specialization,
+						subjectIds: row.SubjectIds?.split(',').map(id => id.trim()),
+						classIds: row.ClassIds?.split(',').map(id => id.trim()),
+					});
+
+					const password = generatePassword();
+
+					await ctx.prisma.user.create({
+						data: {
+							...data,
+							password,
+							userType: UserType.TEACHER,
+							status: Status.ACTIVE,
+							teacherProfile: {
+								create: {
+									teacherType: data.teacherType,
+									specialization: data.specialization,
+									permissions: data.teacherType === TeacherType.CLASS
+										? ["VIEW_CLASS", "MANAGE_ATTENDANCE", "MANAGE_STUDENTS", "VIEW_REPORTS"]
+										: ["VIEW_SUBJECT", "MANAGE_ATTENDANCE"],
+									subjects: data.subjectIds ? {
+										create: data.subjectIds.map(subjectId => ({
+											subject: { connect: { id: subjectId } },
+											status: Status.ACTIVE,
+										})),
+									} : undefined,
+									classes: data.classIds ? {
+										create: data.classIds.map(classId => ({
+											class: { connect: { id: classId } },
+											status: Status.ACTIVE,
+											isClassTeacher: data.teacherType === TeacherType.CLASS,
+										})),
+									} : undefined,
+								},
+							},
+						},
+					});
+
+					results.successful++;
+				} catch (error) {
+					results.failed++;
+					if (error instanceof Error) {
+						results.errors.push(`Row ${results.successful + results.failed}: ${error.message}`);
+					}
+				}
+			}
+
+			return results;
+		})
 });
