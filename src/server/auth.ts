@@ -39,8 +39,8 @@ export const authOptions: NextAuthOptions = {
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;
-        token.roles = user.roles;
-        token.permissions = user.permissions;
+        token.roles = user.roles || [];
+        token.permissions = user.permissions || [];
       }
       return token;
     },
@@ -49,12 +49,23 @@ export const authOptions: NextAuthOptions = {
         session.user = {
           ...session.user,
           id: token.id as string,
-          roles: token.roles as string[],
-          permissions: token.permissions as string[],
+          roles: (token.roles as string[]) || [],
+          permissions: (token.permissions as string[]) || [],
         };
       }
       return session;
     },
+    redirect: async ({ url, baseUrl }) => {
+      // If the url is a relative url, append it to the base url
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // If the url is already an absolute url, return it
+      else if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      return baseUrl;
+    }
   },
 
   adapter: PrismaAdapter(prisma),

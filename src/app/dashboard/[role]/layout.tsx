@@ -180,37 +180,33 @@ export default async function RoleLayout({
 		redirect("/auth/signin");
 	}
 
-// Ensure params.role is properly handled
-const validateRole = async (userRoles: string[], role: string) => {
-	const currentRole = role.toLowerCase();
-	if (!userRoles.includes(currentRole)) {
+	const userRoles = session.user.roles.map((r) => r.toLowerCase());
+	const role = params.role.toLowerCase();
+
+	if (!userRoles.includes(role)) {
 		redirect(`/dashboard/${userRoles[0].toLowerCase()}`);
 	}
-	return currentRole;
-};
 
-const userRoles = session.user.roles.map((r) => r.toLowerCase());
-const currentRole = await validateRole(userRoles, params.role);
+	const getNavItems = (role: string) => {
+		switch (role) {
+			case 'super-admin':
+				return superAdminNavItems;
+			case 'coordinator':
+				return coordinatorNavItems;
+			case 'teacher':
+				return teacherNavItems;
+			case 'student':
+				return studentNavItems;
+			default:
+				return [];
+		}
+	};
 
-const getNavItems = (role: string) => {
-	switch (role) {
-		case 'super-admin':
-			return superAdminNavItems;
-		case 'coordinator':
-			return coordinatorNavItems;
-		case 'teacher':
-			return teacherNavItems;
-		case 'student':
-			return studentNavItems;
-		default:
-			return [];
-	}
-};
+	const navItems = getNavItems(role);
+	const isSuperAdmin = role === 'super-admin';
 
-const navItems = getNavItems(currentRole);
-const isSuperAdmin = currentRole === 'super-admin';
+	return (
 
-return (
 
 	<div className="flex min-h-screen">
 		<aside className="w-64 border-r bg-background">

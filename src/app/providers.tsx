@@ -17,7 +17,15 @@ export function Providers({
   session: any,
   cookieHeader: string
 }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 1000, // 5 seconds
+      },
+    },
+  }));
 
   const [trpcClient] = useState(() => 
     api.createClient({
@@ -44,7 +52,11 @@ export function Providers({
   return (
     <api.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <SessionProvider session={session}>
+        <SessionProvider 
+          session={session} 
+          refetchOnWindowFocus={false}
+          refetchInterval={0}
+        >
           <ThemeProvider 
             attribute="class" 
             defaultTheme="system" 

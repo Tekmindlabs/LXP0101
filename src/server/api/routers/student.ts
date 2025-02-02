@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { Status, UserType } from "@prisma/client";
+import { generatePassword } from "../../../utils/password";
 
 export const studentRouter = createTRPCRouter({
 	createStudent: protectedProcedure
@@ -8,58 +9,77 @@ export const studentRouter = createTRPCRouter({
 			name: z.string(),
 			email: z.string().email(),
 			dateOfBirth: z.date(),
-			classId: z.string().optional(),
-			parentId: z.string().optional(),
-			guardianInfo: z.object({
-				name: z.string(),
-				relationship: z.string(),
-				contact: z.string(),
-			}).optional(),
+			classId: z.string(),
+			parentName: z.string().optional(),
+			parentEmail: z.string().email().optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const { classId, parentId, guardianInfo, ...userData } = input;
+			const password = generatePassword();
+			
+			// Create parent if parent info is provided
+			let parentId: string | undefined;
+			if (input.parentName && input.parentEmail) {
+				const parent = await ctx.prisma.user.create({
+					data: {
+						name: input.parentName,
+						email: input.parentEmail,
+						password: generatePassword(),
+						userType: "PARENT",
+						parentProfile: {
+							create: {},
+						},
+					},
+					include: {
+						parentProfile: true,
+					},
+				});
+				if (parent.parentProfile) {
+					parentId = parent.parentProfile.id;
+				}
+			}
 
+			// Create student
 			const student = await ctx.prisma.user.create({
 				data: {
-					...userData,
-					userType: UserType.STUDENT,
+					name: input.name,
+					email: input.email,
+					password: password,
+					userType: "STUDENT",
 					studentProfile: {
 						create: {
 							dateOfBirth: input.dateOfBirth,
-							...(classId && { classId }),
+							classId: input.classId,
 							...(parentId && { parentId }),
+
 						},
 					},
 				},
 				include: {
-					studentProfile: {
-						include: {
-							class: {
-								include: {
-									classGroup: {
-										include: {
-											program: true,
-										},
-									},
-								},
-							},
-							parent: {
-								include: {
-									user: true,
-								},
-							},
-							activities: {
-								include: {
-									activity: true,
-								},
-							},
-							attendance: true,
-						},
-					},
+					studentProfile: true,
 				},
 			});
+			return {
+				...student,
+				studentProfile: {
+					...student.studentProfile,
+					credentials: password,
+				},
+			};
+		}),
 
-			return student;
+	list: protectedProcedure
+		.input(z.object({
+			classId: z.string()
+		}))
+		.query(async ({ ctx, input }) => {
+			return ctx.prisma.studentProfile.findMany({
+				where: {
+					classId: input.classId
+				},
+				include: {
+					user: true
+				}
+			});
 		}),
 
 	updateStudent: protectedProcedure
@@ -69,58 +89,28 @@ export const studentRouter = createTRPCRouter({
 			email: z.string().email().optional(),
 			dateOfBirth: z.date().optional(),
 			classId: z.string().optional(),
-			parentId: z.string().optional(),
-			guardianInfo: z.object({
-				name: z.string(),
-				relationship: z.string(),
-				contact: z.string(),
-			}).optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const { id, classId, parentId, guardianInfo, dateOfBirth, ...updateData } = input;
-
-			const updatedStudent = await ctx.prisma.user.update({
-				where: { id },
+			const student = await ctx.prisma.user.update({
+				where: { id: input.id },
 				data: {
-					...updateData,
+					name: input.name,
+					email: input.email,
 					studentProfile: {
 						update: {
-							...(dateOfBirth && { dateOfBirth }),
-							...(classId && { classId }),
-							...(parentId && { parentId }),
+							dateOfBirth: input.dateOfBirth,
+							classId: input.classId,
 						},
 					},
 				},
 				include: {
-					studentProfile: {
-						include: {
-							class: {
-								include: {
-									classGroup: {
-										include: {
-											program: true,
-										},
-									},
-								},
-							},
-							parent: {
-								include: {
-									user: true,
-								},
-							},
-							activities: {
-								include: {
-									activity: true,
-								},
-							},
-							attendance: true,
-						},
-					},
+					studentProfile: true,
 				},
 			});
-
-			return updatedStudent;
+			return student;
 		}),
+
+
 
 	deleteStudent: protectedProcedure
 		.input(z.string())
@@ -248,6 +238,48 @@ export const studentRouter = createTRPCRouter({
 					},
 				},
 			});
+		}),
+
+	getStudentProfile: protectedProcedure
+		.input(z.object({
+			id: z.string(),
+		}))
+		.query(async ({ ctx, input }) => {
+			const student = await ctx.prisma.user.findUnique({
+				where: { id: input.id },
+				include: {
+					studentProfile: {
+						include: {
+							class: {
+								include: {
+									classGroup: {
+										include: {
+											program: true,
+										},
+									},
+								},
+							},
+							parent: {
+								include: {
+									user: true,
+								},
+							},
+							activities: {
+								include: {
+									activity: true,
+								},
+							},
+							attendance: true,
+						},
+					},
+				},
+			});
+
+			if (!student || !student.studentProfile) {
+				throw new Error("Student profile not found");
+			}
+
+			return student;
 		}),
 
 	getStudentPerformance: protectedProcedure

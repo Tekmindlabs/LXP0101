@@ -15,6 +15,7 @@ export function AuthProvider({
       session={session}
       refetchInterval={0}
       refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
     >
       {children}
     </SessionProvider>

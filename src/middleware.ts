@@ -15,15 +15,44 @@ export default withAuth(
     const isAuthPage = req.nextUrl.pathname.startsWith('/auth');
     const isDashboardPage = req.nextUrl.pathname.startsWith('/dashboard');
     const isApiAuthRoute = req.nextUrl.pathname.startsWith('/api/auth');
+    const isTrpcRoute = req.nextUrl.pathname.startsWith('/api/trpc');
     const isPublicRoute = 
       req.nextUrl.pathname === '/' || 
       req.nextUrl.pathname.startsWith('/_next') ||
-      req.nextUrl.pathname.startsWith('/api/trpc') ||
+      isTrpcRoute ||
       isApiAuthRoute;
 
-    // Allow all API and public routes
+    console.log('Middleware - Request:', {
+      path: req.nextUrl.pathname,
+      isAuth,
+      roles: token?.roles,
+      isTrpcRoute,
+    });
+
+    // Always allow TRPC routes
+    if (isTrpcRoute) {
+      return NextResponse.next();
+    }
+
+    // Allow all public routes
     if (isPublicRoute) {
       return NextResponse.next();
+    }
+
+    // Check role-based access for dashboard routes
+    if (isDashboardPage && isAuth) {
+      const urlRole = req.nextUrl.pathname.split('/')[2]; // Get role from URL
+      const userRole = token.roles?.[0];
+      
+      // If accessing a role-specific route that doesn't match user's role
+      if (urlRole && urlRole !== userRole) {
+      return NextResponse.redirect(new URL(`/dashboard/${userRole}`, req.url));
+      }
+      
+      // If accessing /dashboard directly, redirect to role-specific dashboard
+      if (req.nextUrl.pathname === '/dashboard') {
+      return NextResponse.redirect(new URL(`/dashboard/${userRole}`, req.url));
+      }
     }
 
     // Redirect authenticated users away from auth pages
@@ -50,16 +79,20 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        const isAuthPage = req.nextUrl.pathname.startsWith('/auth');
-        const isApiAuthRoute = req.nextUrl.pathname.startsWith('/api/auth');
-        const isPublicRoute = 
-          req.nextUrl.pathname === '/' || 
-          req.nextUrl.pathname.startsWith('/_next') ||
-          req.nextUrl.pathname.startsWith('/api/trpc') ||
-          isApiAuthRoute;
+      const isAuthPage = req.nextUrl.pathname.startsWith('/auth');
+      const isApiAuthRoute = req.nextUrl.pathname.startsWith('/api/auth');
+      const isTrpcRoute = req.nextUrl.pathname.startsWith('/api/trpc');
+      const isPublicRoute = 
+        req.nextUrl.pathname === '/' || 
+        req.nextUrl.pathname.startsWith('/_next') ||
+        isTrpcRoute ||
+        isApiAuthRoute;
 
-        if (isPublicRoute || isAuthPage) return true;
-        return !!token;
+      // Always allow TRPC routes
+      if (isTrpcRoute) return true;
+
+      if (isPublicRoute || isAuthPage) return true;
+      return !!token;
       }
     }
   }

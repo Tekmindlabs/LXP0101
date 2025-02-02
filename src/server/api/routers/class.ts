@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { Status } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 
 export const classRouter = createTRPCRouter({
 	createClass: protectedProcedure
@@ -256,29 +257,41 @@ export const classRouter = createTRPCRouter({
 		}),
 
 	list: protectedProcedure
-		.query(({ ctx }) => {
-			return ctx.prisma.class.findMany({
-				include: {
-					classGroup: true,
-					students: true,
-					teachers: {
-						include: {
-							teacher: true,
+		.query(async ({ ctx }) => {
+			console.log('List Classes - Session:', ctx.session);
+			try {
+				const classes = await ctx.prisma.class.findMany({
+					include: {
+						classGroup: true,
+						students: true,
+						teachers: {
+							include: {
+								teacher: true,
+							},
 						},
-					},
-					timetables: {
-						include: {
-							periods: {
-								include: {
-									subject: true,
-									classroom: true,
+						timetables: {
+							include: {
+								periods: {
+									include: {
+										subject: true,
+										classroom: true,
+									},
 								},
 							},
 						},
+						activities: true,
 					},
-					activities: true,
-				},
-			});
+				});
+				console.log('Classes found:', classes.length);
+				return classes;
+			} catch (error) {
+				console.error('Error fetching classes:', error);
+				throw new TRPCError({
+					code: 'INTERNAL_SERVER_ERROR',
+					message: 'Failed to fetch classes',
+					cause: error,
+				});
+			}
 		}),
 
 	getById: protectedProcedure
@@ -362,6 +375,51 @@ export const classRouter = createTRPCRouter({
 						},
 					},
 				},
+			});
+		}),
+
+	getTeacherClasses: protectedProcedure
+		.query(async ({ ctx }) => {
+			const userId = ctx.session?.user?.id;
+			if (!userId) return [];
+
+			return ctx.prisma.class.findMany({
+				where: {
+					teachers: {
+						some: {
+							teacher: {
+								userId: userId
+							}
+						}
+					}
+				},
+				include: {
+					classGroup: true,
+					teachers: {
+						include: {
+							teacher: {
+								include: {
+									user: true
+								}
+							}
+						}
+					}
+				}
+			});
+		}),
+
+	getStudents: protectedProcedure
+		.input(z.object({
+			classId: z.string()
+		}))
+		.query(async ({ ctx, input }) => {
+			return ctx.prisma.studentProfile.findMany({
+				where: {
+					classId: input.classId
+				},
+				include: {
+					user: true
+				}
 			});
 		}),
 });

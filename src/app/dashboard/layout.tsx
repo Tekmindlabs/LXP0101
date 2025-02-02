@@ -4,7 +4,6 @@ import { DashboardNav } from "@/components/dashboard/nav";
 import { UserNav } from "@/components/dashboard/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "next-auth/react";
-import { AuthProvider } from "@/components/providers/auth-provider";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -18,12 +17,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthProvider>
-      <DashboardContent>{children}</DashboardContent>
-    </AuthProvider>
-  );
+  return <DashboardContent>{children}</DashboardContent>;
 }
+
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();

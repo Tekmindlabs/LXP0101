@@ -5,12 +5,23 @@ import { getServerAuthSession } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export const createTRPCContext = async (opts: { req: Request }) => {
-  const session = await getServerAuthSession().catch(() => null);
-  return {
-    prisma,
-    session,
-  };
+  try {
+    const session = await getServerAuthSession();
+    console.log('TRPC Context Session:', session);
+    return {
+      prisma,
+      session,
+    };
+  } catch (error) {
+    console.error('Error in createTRPCContext:', error);
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Failed to create TRPC context',
+      cause: error,
+    });
+  }
 };
+
 
 
 
@@ -34,11 +45,10 @@ export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 
 const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
-  if (!ctx.session?.user) {
-    return next({
-      ctx: {
-        session: null,
-      },
+  if (!ctx.session || !ctx.session.user) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'You must be logged in to access this resource',
     });
   }
   return next({
@@ -47,6 +57,7 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
     },
   });
 });
+
 
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 

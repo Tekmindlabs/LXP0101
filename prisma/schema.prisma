@@ -20,6 +20,7 @@ model User {
   updatedAt         DateTime  @updatedAt
   deleted           DateTime?
   dataRetentionDate DateTime?
+  dateOfBirth       DateTime?
 
   // userRoles relation
   userType  UserType?
@@ -301,6 +302,7 @@ model ParentProfile {
 }
 
 // Attendance Models
+
 model Attendance {
   id        String           @id @default(cuid())
   student   StudentProfile   @relation(fields: [studentId], references: [id])
@@ -310,6 +312,9 @@ model Attendance {
   notes     String?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+
+    @@unique([studentId, date])
+    
 }
 
 // Activity & Assessment Models

@@ -10,12 +10,21 @@ const handler = (req: NextRequest) =>
 		endpoint: "/api/trpc",
 		req,
 		router: appRouter,
-		createContext: () => createTRPCContext({ req }),
+		createContext: async () => {
+			const ctx = await createTRPCContext({ req });
+			console.log('TRPC Context Created:', {
+				hasSession: !!ctx.session,
+				userId: ctx.session?.user?.id,
+				userRoles: ctx.session?.user?.roles,
+			});
+			return ctx;
+		},
 		onError:
 			env.NODE_ENV === "development"
 				? ({ path, error }) => {
 						console.error(
-							`❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`
+							`❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`,
+							'\nError cause:', error.cause
 						);
 					}
 				: undefined,

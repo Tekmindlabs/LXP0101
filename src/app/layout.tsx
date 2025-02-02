@@ -23,15 +23,21 @@ export default async function RootLayout({
   const headersList = await headers();
   const cookieHeader = headersList.get("cookie") ?? "";
 
+  console.log('Root Layout - Session:', {
+    hasSession: !!session,
+    userId: session?.user?.id,
+    userRoles: session?.user?.roles,
+  });
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-      <Providers session={session} cookieHeader={cookieHeader}>
-        {children}
-        <ConsentBanner />
-        <Toaster />
-      </Providers>
+        <Providers session={session} cookieHeader={cookieHeader}>
+          {children}
+          <ConsentBanner />
+          <Toaster />
+        </Providers>
       </body>
     </html>
-  )
+  );
 }
