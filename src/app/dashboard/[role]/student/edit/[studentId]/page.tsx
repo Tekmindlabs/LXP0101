@@ -63,9 +63,8 @@ export default function EditStudentPage({ params }: { params: { role: string; st
 		},
 	});
 
-	const { setValue } = form;
-
 	useEffect(() => {
+
 		if (student && student.studentProfile) {
 			form.reset({
 				name: student.name || '',
@@ -184,7 +183,7 @@ export default function EditStudentPage({ params }: { params: { role: string; st
 											type="email" 
 											placeholder="Email" 
 											{...field} 
-											value={field.value ?? ''} 
+											value={field.value || ''} 
 										/>
 									</FormControl>
 									<FormMessage />
