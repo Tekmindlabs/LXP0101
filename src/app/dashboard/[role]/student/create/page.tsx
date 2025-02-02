@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
-import { Class } from '@prisma/client';
 
 const formSchema = z.object({
 	name: z.string().min(1, { message: 'Name is required' }),
@@ -26,22 +25,42 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function CreateStudentPage() {
 	const router = useRouter();
+	const params = useParams();
+	const role = params.role as string;
 	const { toast } = useToast();
 	const [password, setPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
 	const [copied, setCopied] = useState(false);
+	const [parentPassword, setParentPassword] = useState('');
+	const [showParentPassword, setShowParentPassword] = useState(false);
+	const [copiedParent, setCopiedParent] = useState(false);
+
+	const handleCopy = () => {
+		navigator.clipboard.writeText(password);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	const handleParentCopy = () => {
+		navigator.clipboard.writeText(parentPassword);
+		setCopiedParent(true);
+		setTimeout(() => setCopiedParent(false), 2000);
+	};
 
 	const { data: classes = [] } = api.class.list.useQuery();
+	
 	const createStudentMutation = api.student.createStudent.useMutation({
 		onSuccess: (result) => {
 			if (result.studentProfile?.credentials) {
 				setPassword(result.studentProfile.credentials);
 			}
+			if (result.parentProfile?.credentials) {
+				setParentPassword(result.parentProfile.credentials);
+			}
 			toast({
 				title: 'Student created successfully',
 				description: `Student ${result.name} has been created`,
 			});
-			router.push('/dashboard/admin/student');
 		},
 		onError: () => {
 			toast({
@@ -64,131 +83,192 @@ export default function CreateStudentPage() {
 		},
 	});
 
-	const handleCopy = () => {
-		navigator.clipboard.writeText(password);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
-	};
-
 	const onSubmit = (data: FormData) => {
 		createStudentMutation.mutate(data);
 	};
 
-
-
 	return (
-		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-				{password && (
-					<div className="space-y-2">
-						<FormLabel>Generated Password</FormLabel>
-						<div className="flex items-center">
-							<Input type={showPassword ? 'text' : 'password'} value={password} readOnly />
-							<Button
-								type="button"
-								variant="ghost"
-								onClick={() => setShowPassword(!showPassword)}
-								className="ml-2"
-							>
-								{showPassword ? 'Hide' : 'Show'}
-							</Button>
-							<Button
-								onClick={handleCopy}
-								className="ml-2"
-								disabled={copied}
-							>
-								{copied ? 'Copied!' : 'Copy'}
-							</Button>
-						</div>
+		<div className="space-y-6">
+			<Form {...form}>
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+					{/* Student Information */}
+					<div className="space-y-4">
+						<h3 className="text-lg font-semibold">Student Information</h3>
+						<FormField
+							control={form.control}
+							name="name"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Name</FormLabel>
+									<FormControl>
+										<Input placeholder="Student Name" {...field} />
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="email"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Email</FormLabel>
+									<FormControl>
+										<Input type="email" placeholder="Student Email" {...field} />
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="dateOfBirth"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Date of Birth</FormLabel>
+									<FormControl>
+										<Input 
+											type="date" 
+											{...field} 
+											value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} 
+											onChange={(e) => field.onChange(new Date(e.target.value))} 
+										/>
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="classId"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Class</FormLabel>
+									<FormControl>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<SelectTrigger>
+												<SelectValue placeholder="Select class" />
+											</SelectTrigger>
+											<SelectContent>
+												{(classes as any[]).map((cls) => (
+													<SelectItem key={cls.id} value={cls.id}>
+														{cls.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
 					</div>
-				)}
-				<FormField
-					control={form.control}
-					name="name"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Name</FormLabel>
-							<Input placeholder="Name" {...field} />
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
 
-				<FormField
-					control={form.control}
-					name="email"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Email</FormLabel>
-							<Input type="email" placeholder="Email" {...field} />
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+					{/* Guardian Information */}
+					<div className="space-y-4">
+						<h3 className="text-lg font-semibold">Guardian Information</h3>
+						<FormField
+							control={form.control}
+							name="parentName"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Guardian Name</FormLabel>
+									<FormControl>
+										<Input placeholder="Guardian Name" {...field} />
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="parentEmail"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Guardian Email</FormLabel>
+									<FormControl>
+										<Input type="email" placeholder="Guardian Email" {...field} />
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
+					</div>
 
-				<FormField
-					control={form.control}
-					name="dateOfBirth"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Date of Birth</FormLabel>
-							<Input type="date" {...field} value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} onChange={(e) => field.onChange(new Date(e.target.value))} />
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+					<Button type="submit" className="w-full">Create Student</Button>
+				</form>
+			</Form>
 
-				<FormField
-					control={form.control}
-					name="classId"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Class</FormLabel>
-							<Select onValueChange={field.onChange} value={field.value}>
-								<SelectTrigger>
-									<SelectValue placeholder="Select class" />
-								</SelectTrigger>
-								<SelectContent>
-									{(classes as any[]).map((cls) => (
-										<SelectItem key={cls.id} value={cls.id}>
-											{cls.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+			{/* Credentials Section - Outside Form */}
+			{password && (
+				<div className="space-y-2 p-4 border rounded-lg bg-muted">
+					<FormLabel className="font-bold">Generated Credentials</FormLabel>
+					<div className="flex items-center">
+						<Input
+							type={showPassword ? 'text' : 'password'}
+							value={password}
+							readOnly
+							className="font-mono"
+						/>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => setShowPassword(!showPassword)}
+							className="ml-2"
+						>
+							{showPassword ? 'Hide' : 'Show'}
+						</Button>
+						<Button
+							onClick={handleCopy}
+							className="ml-2"
+							disabled={copied}
+						>
+							{copied ? 'Copied!' : 'Copy'}
+						</Button>
+					</div>
+				</div>
+			)}
 
-				<FormField
-					control={form.control}
-					name="parentName"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Parent Name</FormLabel>
-							<Input placeholder="Parent Name" {...field} />
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+			{parentPassword && (
+				<div className="space-y-2 p-4 border rounded-lg bg-muted">
+					<FormLabel className="font-bold">Guardian Credentials</FormLabel>
+					<div className="flex items-center">
+						<Input
+							type={showParentPassword ? 'text' : 'password'}
+							value={parentPassword}
+							readOnly
+							className="font-mono"
+						/>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => setShowParentPassword(!showParentPassword)}
+							className="ml-2"
+						>
+							{showParentPassword ? 'Hide' : 'Show'}
+						</Button>
+						<Button
+							onClick={handleParentCopy}
+							className="ml-2"
+							disabled={copiedParent}
+						>
+							{copiedParent ? 'Copied!' : 'Copy'}
+						</Button>
+					</div>
+				</div>
+			)}
 
-				<FormField
-					control={form.control}
-					name="parentEmail"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Parent Email</FormLabel>
-							<Input type="email" placeholder="Parent Email" {...field} />
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+			{(password || parentPassword) && (
+				<Button 
+					onClick={() => router.push(`/dashboard/${role}/student`)}
+					className="w-full"
+				>
+					Continue to Student List
+				</Button>
+			)}
+		</div>
 
-
-				<Button type="submit">Create Student</Button>
-			</form>
-		</Form>
 	);
 }
+
 

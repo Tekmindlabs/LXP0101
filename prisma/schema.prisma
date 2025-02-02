@@ -12,6 +12,7 @@ model User {
   id                String    @id @default(cuid())
   name              String?
   email             String?   @unique
+  phoneNumber       String?
   emailVerified     DateTime?
   image             String?
   password          String?
@@ -246,11 +247,13 @@ model TeacherProfile {
   id             String           @id @default(cuid())
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String           @unique
+  teacherType    TeacherType     @default(SUBJECT)
   specialization String?
   subjects       TeacherSubject[]
   classes        TeacherClass[]
   periods        Period[]
   availability   String?
+  permissions    String[]         @default([])
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -271,14 +274,15 @@ model TeacherSubject {
 }
 
 model TeacherClass {
-  id        String         @id @default(cuid())
-  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
-  teacherId String
-  class     Class          @relation(fields: [classId], references: [id])
-  classId   String
-  status    Status         @default(ACTIVE)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  teacher        TeacherProfile @relation(fields: [teacherId], references: [id])
+  teacherId      String
+  class          Class          @relation(fields: [classId], references: [id])
+  classId        String
+  isClassTeacher Boolean        @default(false)
+  status         Status         @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@unique([teacherId, classId])
 }
@@ -670,6 +674,11 @@ enum ParticipantRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+enum TeacherType {
+  CLASS
+  SUBJECT
 }
 
 // Knowledge Base Models

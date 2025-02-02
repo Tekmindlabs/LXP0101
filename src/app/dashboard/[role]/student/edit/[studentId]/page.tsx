@@ -27,6 +27,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function EditStudentPage() {
 	const params = useParams();
 	const studentId = params.studentId as string;
+	const role = params.role as string;
 	const router = useRouter();
 	const { toast } = useToast();
 	const { data: classes = [] } = api.class.list.useQuery();
@@ -37,7 +38,7 @@ export default function EditStudentPage() {
 				title: 'Student updated successfully',
 				description: 'Student has been updated',
 			});
-			router.push('/dashboard/admin/student');
+			router.push(`/dashboard/${role}/student`);
 		},
 		onError: () => {
 			toast({
@@ -82,77 +83,86 @@ export default function EditStudentPage() {
 
 
 	return (
-		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-				<FormField
-					control={form.control}
-					name="name"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Name</FormLabel>
-							<Input placeholder="Name" {...field} />
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+		<div className="space-y-6">
+			<Form {...form}>
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+					<div className="space-y-4">
+						<FormField
+							control={form.control}
+							name="name"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Name</FormLabel>
+									<FormControl>
+										<Input placeholder="Name" {...field} />
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
 
-				<FormField
-					control={form.control}
-					name="email"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Email</FormLabel>
-							<Input type="email" placeholder="Email" {...field} />
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+						<FormField
+							control={form.control}
+							name="email"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Email</FormLabel>
+									<FormControl>
+										<Input type="email" placeholder="Email" {...field} />
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
 
-				<FormField
-					control={form.control}
-					name="dateOfBirth"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Date of Birth</FormLabel>
-							<Input 
-								type="date" 
-								{...field} 
-								value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} 
-								onChange={(e) => field.onChange(new Date(e.target.value))} 
-							/>
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+						<FormField
+							control={form.control}
+							name="dateOfBirth"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Date of Birth</FormLabel>
+									<FormControl>
+										<Input 
+											type="date" 
+											{...field} 
+											value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} 
+											onChange={(e) => field.onChange(new Date(e.target.value))} 
+										/>
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
 
-				<FormField
-					control={form.control}
-					name="classId"
-					render={({ field }) => (
-						<FormControl>
-							<FormLabel>Class</FormLabel>
-							<Select value={field.value} onValueChange={field.onChange}>
-								<SelectTrigger>
-									<SelectValue placeholder="Select class" />
-								</SelectTrigger>
-								<SelectContent>
-									{classes.map((cls) => (
-										<SelectItem key={cls.id} value={cls.id}>
-											{cls.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormControl>
-					)}
-				/>
+						<FormField
+							control={form.control}
+							name="classId"
+							render={({ field }) => (
+								<div className="space-y-2">
+									<FormLabel>Class</FormLabel>
+									<FormControl>
+										<Select value={field.value} onValueChange={field.onChange}>
+											<SelectTrigger>
+												<SelectValue placeholder="Select class" />
+											</SelectTrigger>
+											<SelectContent>
+												{classes.map((cls) => (
+													<SelectItem key={cls.id} value={cls.id}>
+														{cls.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</FormControl>
+									<FormMessage />
+								</div>
+							)}
+						/>
+					</div>
 
-
-
-
-				<Button type="submit">Update Student</Button>
-			</form>
-		</Form>
+					<Button type="submit">Update Student</Button>
+				</form>
+			</Form>
+		</div>
 	);
 }

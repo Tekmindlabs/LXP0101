@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Status } from "@prisma/client";
@@ -18,6 +20,9 @@ interface SearchFilters {
 }
 
 export const StudentManagement = () => {
+	const router = useRouter();
+	const params = useParams();
+	const role = params.role as string;
 	const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 	const [showDetails, setShowDetails] = useState(false);
 	const [filters, setFilters] = useState<SearchFilters>({
@@ -35,11 +40,15 @@ export const StudentManagement = () => {
 		return <div>Loading...</div>;
 	}
 
+
 	return (
 		<div className="space-y-4">
 			<Card>
-				<CardHeader>
+				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle>Student Management</CardTitle>
+					<Button onClick={() => router.push(`/dashboard/${role}/student/create`)}>
+						Enroll Student
+					</Button>
 				</CardHeader>
 				<CardContent>
 					<div className="mb-6 space-y-4">

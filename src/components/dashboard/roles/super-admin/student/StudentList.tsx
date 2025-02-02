@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Status } from "@prisma/client";
 import { Student } from "@/types/user";
+import { useRouter, useParams } from "next/navigation";
 
 interface StudentListProps {
 	students: Student[];
@@ -12,6 +13,10 @@ interface StudentListProps {
 }
 
 export const StudentList = ({ students, onSelect }: StudentListProps) => {
+	const router = useRouter();
+	const params = useParams();
+	const role = params.role as string;
+
 	const calculateAttendanceRate = (attendance: { status: string }[]) => {
 		if (attendance.length === 0) return 0;
 		const present = attendance.filter(a => a.status === 'PRESENT').length;
@@ -69,13 +74,22 @@ export const StudentList = ({ students, onSelect }: StudentListProps) => {
 								</Badge>
 							</TableCell>
 							<TableCell>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => onSelect(student.id)}
-								>
-									View Details
-								</Button>
+								<div className="flex space-x-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => onSelect(student.id)}
+									>
+										View Details
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => router.push(`/dashboard/${role}/student/edit/${student.id}`)}
+									>
+										Edit
+									</Button>
+								</div>
 							</TableCell>
 						</TableRow>
 					))}

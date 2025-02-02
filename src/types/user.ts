@@ -1,6 +1,12 @@
 import { Status } from "@prisma/client";
 
+export enum TeacherType {
+	CLASS = "CLASS",
+	SUBJECT = "SUBJECT"
+}
+
 export interface Student {
+
 	id: string;
 	name: string;
 	email: string;
@@ -27,6 +33,28 @@ export interface Student {
 		activities: {
 			status: string;
 			grade?: number;
+		}[];
+	};
+}
+
+export interface Teacher {
+	id: string;
+	name: string;
+	email: string;
+	phoneNumber: string;
+	status: Status;
+	teacherProfile: {
+		teacherType: TeacherType;
+		specialization: string | null;
+		availability: string | null;
+		subjects: { subject: { id: string; name: string } }[];
+		classes: { 
+			class: { 
+				id: string; 
+				name: string;
+				classGroup: { name: string } 
+			};
+			isClassTeacher: boolean;
 		}[];
 	};
 }

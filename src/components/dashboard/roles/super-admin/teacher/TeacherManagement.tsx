@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Status } from "@prisma/client";
 import { api } from "@/utils/api";
 import { TeacherList } from "./TeacherList";
-import { TeacherForm } from "./TeacherForm";
-import { TeacherView } from "./TeacherView";
-import { Button } from "@/components/ui/button";
+
 
 // Define interfaces for the component
 interface Subject {
@@ -49,10 +48,9 @@ interface SearchFilters {
 
 
 export const TeacherManagement = () => {
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isViewOpen, setIsViewOpen] = useState(false);
+  const router = useRouter();
   const [filters, setFilters] = useState<SearchFilters>({
+
     search: "",
     subjectId: "all",
     classId: "all",
@@ -73,14 +71,8 @@ export const TeacherManagement = () => {
   const { data: subjects } = api.subject.searchSubjects.useQuery({});
   const { data: classes } = api.class.searchClasses.useQuery({});
 
-  const handleCreate = () => {
-    setSelectedTeacherId(null);
-    setIsFormOpen(true);
-  };
-
-
-
   if (isLoading) {
+
     return <div>Loading...</div>;
   }
 
@@ -151,49 +143,12 @@ export const TeacherManagement = () => {
             </div>
           </div>
 
-            <div className="space-y-4">
-            <TeacherList 
-              teachers={teachers || []} 
-              onSelect={(id) => {
-              const teacher = teachers?.find((t) => t.id === id);
-              if (teacher) {
-                setSelectedTeacherId(id);
-                setIsViewOpen(true);
-              }
-              }}
-              onEdit={(id) => {
-              const teacher = teachers?.find((t) => t.id === id);
-              if (teacher) {
-                setSelectedTeacherId(id);
-                setIsFormOpen(true);
-              }
-              }}
+            <TeacherList
+              teachers={teachers || []}
+              onSelect={(id) => router.push(`/dashboard/super-admin/teacher/${id}`)}
+              onEdit={(id) => router.push(`/dashboard/super-admin/teacher/${id}/edit`)}
             />
-            <TeacherForm 
-              isOpen={isFormOpen}
-              onClose={() => {
-              setIsFormOpen(false);
-              setSelectedTeacherId(null);
-              }}
-              selectedTeacher={selectedTeacherId ? teachers?.find((t) => t.id === selectedTeacherId) : undefined}
-              subjects={subjects || []}
-              classes={classes || []}
-            />
-            {selectedTeacherId && (
-              <TeacherView
-              isOpen={isViewOpen}
-              onClose={() => {
-                setIsViewOpen(false);
-                setSelectedTeacherId(null);
-              }}
-              teacherId={selectedTeacherId}
-              onEdit={() => {
-                setIsViewOpen(false);
-                setIsFormOpen(true);
-              }}
-              />
-            )}
-            </div>
+
         </CardContent>
       </Card>
     </div>

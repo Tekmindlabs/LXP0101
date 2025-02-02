@@ -19,7 +19,10 @@
     "test": "jest",
     "type-check": "tsc --noEmit",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
-    "seed:demo": "ts-node --project tsconfig.seed.json prisma/demo-seed.ts"
+    "seed:demo": "ts-node --project tsconfig.seed.json prisma/demo-seed.ts",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:reset": "prisma migrate reset",
+    "migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

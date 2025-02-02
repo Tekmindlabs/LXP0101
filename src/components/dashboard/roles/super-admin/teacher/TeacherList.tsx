@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Status } from "@prisma/client";
+import { Status, TeacherType } from "@prisma/client";
 
 interface Teacher {
 	id: string;
@@ -11,6 +11,7 @@ interface Teacher {
 	email: string;
 	status: Status;
 	teacherProfile: {
+		teacherType: TeacherType;
 		specialization: string | null;
 		availability: string | null;
 		subjects: {
@@ -43,6 +44,7 @@ export const TeacherList = ({ teachers, onSelect, onEdit }: TeacherListProps) =>
 					<TableRow>
 						<TableHead>Name</TableHead>
 						<TableHead>Email</TableHead>
+						<TableHead>Teacher Type</TableHead>
 						<TableHead>Specialization</TableHead>
 						<TableHead>Availability</TableHead>
 						<TableHead>Subjects</TableHead>
@@ -56,6 +58,11 @@ export const TeacherList = ({ teachers, onSelect, onEdit }: TeacherListProps) =>
 						<TableRow key={teacher.id}>
 							<TableCell>{teacher.name}</TableCell>
 							<TableCell>{teacher.email}</TableCell>
+							<TableCell>
+								<Badge variant="outline">
+									{teacher.teacherProfile?.teacherType || 'SUBJECT'}
+								</Badge>
+							</TableCell>
 							<TableCell>{teacher.teacherProfile?.specialization || '-'}</TableCell>
 							<TableCell>{teacher.teacherProfile?.availability || '-'}</TableCell>
 							<TableCell>

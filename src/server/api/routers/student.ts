@@ -14,57 +14,137 @@ export const studentRouter = createTRPCRouter({
 			parentEmail: z.string().email().optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const password = generatePassword();
-			
-			// Create parent if parent info is provided
-			let parentId: string | undefined;
-			if (input.parentName && input.parentEmail) {
-				const parent = await ctx.prisma.user.create({
-					data: {
-						name: input.parentName,
-						email: input.parentEmail,
-						password: generatePassword(),
-						userType: "PARENT",
-						parentProfile: {
-							create: {},
-						},
-					},
-					include: {
-						parentProfile: true,
-					},
+			try {
+				// Check if student email exists
+				const existingStudent = await ctx.prisma.user.findUnique({
+					where: { email: input.email }
 				});
-				if (parent.parentProfile) {
-					parentId = parent.parentProfile.id;
+				if (existingStudent) {
+					throw new Error("Email already exists");
 				}
-			}
 
-			// Create student
-			const student = await ctx.prisma.user.create({
-				data: {
-					name: input.name,
-					email: input.email,
-					password: password,
-					userType: "STUDENT",
-					studentProfile: {
-						create: {
-							dateOfBirth: input.dateOfBirth,
-							classId: input.classId,
-							...(parentId && { parentId }),
+				// Check if parent email exists if provided
+				if (input.parentEmail) {
+					const existingParent = await ctx.prisma.user.findUnique({
+						where: { email: input.parentEmail }
+					});
+					if (existingParent) {
+						throw new Error("Parent email already exists");
+					}
+				}
 
+				const studentPassword = generatePassword();
+				let parentData = null;
+				
+				// Create parent if parent info is provided
+				if (input.parentName && input.parentEmail) {
+					try {
+						const parentPassword = generatePassword();
+						const parent = await ctx.prisma.user.create({
+							data: {
+								name: input.parentName,
+								email: input.parentEmail,
+								password: parentPassword,
+								userType: "PARENT",
+								status: "ACTIVE",
+								parentProfile: {
+									create: {},
+								},
+								userRoles: {
+									create: {
+										role: {
+											connectOrCreate: {
+												where: { name: "PARENT" },
+												create: { name: "PARENT" }
+											}
+										}
+									}
+								}
+							},
+							include: {
+								parentProfile: true,
+								userRoles: {
+									include: {
+										role: true
+									}
+								}
+							},
+						});
+						
+						parentData = {
+							...parent,
+							credentials: parentPassword
+						};
+					} catch (error) {
+						if (error instanceof Error) {
+							throw new Error(`Failed to create parent: ${error.message}`);
+						}
+						throw new Error("Failed to create parent");
+					}
+				}
+
+				// Create student
+				try {
+					const student = await ctx.prisma.user.create({
+						data: {
+							name: input.name,
+							email: input.email,
+							password: studentPassword,
+							userType: "STUDENT",
+							status: "ACTIVE",
+							studentProfile: {
+								create: {
+									dateOfBirth: input.dateOfBirth,
+									classId: input.classId,
+									...(parentData?.parentProfile && { parentId: parentData.parentProfile.id }),
+								},
+							},
+							userRoles: {
+								create: {
+									role: {
+										connectOrCreate: {
+											where: { name: "STUDENT" },
+											create: { name: "STUDENT" }
+										}
+									}
+								}
+							}
 						},
-					},
-				},
-				include: {
-					studentProfile: true,
-				},
-			});
-			return {
-				...student,
-				studentProfile: {
-					...student.studentProfile,
-					credentials: password,
-				},
-			};
+						include: {
+							studentProfile: true,
+							userRoles: {
+								include: {
+									role: true
+								}
+							}
+						},
+					});
+
+					return {
+						...student,
+						studentProfile: {
+							...student.studentProfile,
+							credentials: studentPassword,
+						},
+						userRoles: student.userRoles,
+						parentProfile: parentData ? {
+							...parentData.parentProfile,
+							credentials: parentData.credentials,
+							userRoles: parentData.userRoles
+						} : null
+					};
+				} catch (error) {
+					if (error instanceof Error) {
+						throw new Error(`Failed to create student: ${error.message}`);
+					}
+					throw new Error("Failed to create student");
+				}
+			} catch (error) {
+				if (error instanceof Error) {
+					throw new Error(error.message);
+				}
+				throw new Error("Failed to create student");
+			}
 		}),
 
 	list: protectedProcedure
