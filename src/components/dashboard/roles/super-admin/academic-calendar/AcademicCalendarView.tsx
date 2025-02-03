@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { api } from "@/utils/api";
-import { EventType, Status, CalendarType, Visibility } from "@prisma/client";
+import { Status } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { CalendarForm } from "./CalendarForm";
 import { EventForm } from "./EventForm";
@@ -66,16 +66,16 @@ export const AcademicCalendarView = () => {
             <CalendarForm 
             onSubmit={(data) => {
               if (!data.name || !data.startDate || !data.endDate) return;
-              createCalendar.mutate({
-              name: data.name,
-              startDate: data.startDate,
-              endDate: data.endDate,
-              description: data.description ?? undefined,
-              status: Status.ACTIVE,
-              type: data.type ?? CalendarType.PRIMARY,
-              isDefault: false,
-              visibility: data.visibility ?? Visibility.ALL
-              });
+                createCalendar.mutate({
+                name: data.name,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                description: data.description ?? undefined,
+                status: Status.ACTIVE,
+                type: data.type ?? 'master',
+                isDefault: false,
+                visibility: data.visibility ?? 'public'
+                });
             }} 
             />
           </DialogContent>

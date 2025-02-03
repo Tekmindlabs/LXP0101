@@ -11,8 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { api } from "@/utils/api";
-import { EventType } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
+
 import { EventForm } from "../academic-calendar/EventForm";
 
 
@@ -70,8 +70,8 @@ const CalendarView = () => {
 		const dayEvents = getEventsForDate(date);
 		if (dayEvents.length === 0) return '';
 		const eventTypes = dayEvents.map(e => e.eventType);
-		if (eventTypes.includes(EventType.HOLIDAY)) return 'bg-red-200 text-red-800 hover:bg-red-300';
-		if (eventTypes.includes(EventType.EXAM)) return 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300';
+		if (eventTypes.includes('holiday')) return 'bg-red-200 text-red-800 hover:bg-red-300';
+		if (eventTypes.includes('exam')) return 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300';
 		return 'bg-blue-200 text-blue-800 hover:bg-blue-300';
 	};
 
@@ -208,8 +208,8 @@ const CalendarView = () => {
 											<div
 												key={index}
 												className={`p-4 rounded-lg ${
-													event.eventType === EventType.HOLIDAY ? 'bg-red-100' :
-													event.eventType === EventType.EXAM ? 'bg-yellow-100' :
+													event.eventType === 'holiday' ? 'bg-red-100' :
+													event.eventType === 'exam' ? 'bg-yellow-100' :
 													'bg-blue-100'
 												}`}
 											>

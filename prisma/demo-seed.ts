@@ -140,23 +140,23 @@ async function seedDemoData() {
     // 1. Create Demo Calendars
     console.log('Creating demo calendars...');
     const masterCalendar = await prisma.calendar.upsert({
-      where: {
-      name_type: {
+        where: {
+        name_type: {
         name: "2024-2025 Master Calendar",
-        type: "master"
-      }
-      },
-      update: {
-      status: Status.ACTIVE,
-      visibility: "public",
-      metadata: {
+        type: "MASTER"
+        }
+        },
+        update: {
+        status: Status.ACTIVE,
+        visibility: "public",
+        metadata: {
         academicYear: '2024-2025',
         terms: 2
-      }
-      },
-      create: {
-      name: '2024-2025 Master Calendar',
-      type: "master",
+        }
+        },
+        create: {
+        name: '2024-2025 Master Calendar',
+        type: "MASTER",
       status: Status.ACTIVE,
       visibility: "public",
       metadata: {
@@ -168,19 +168,19 @@ async function seedDemoData() {
 
     // Create class group calendar
     const classGroupCalendar = await prisma.calendar.upsert({
-      where: {
-      name_type: {
+        where: {
+        name_type: {
         name: "Grade 1 Calendar",
-        type: "class-group"
-      }
-      },
-      update: {
-      status: Status.ACTIVE,
-      visibility: "public"
-      },
-      create: {
-      name: 'Grade 1 Calendar',
-      type: "class-group",
+        type: "CLASS_GROUP"
+        }
+        },
+        update: {
+        status: Status.ACTIVE,
+        visibility: "public"
+        },
+        create: {
+        name: 'Grade 1 Calendar',
+        type: "CLASS_GROUP",
       status: Status.ACTIVE,
       visibility: "public"
       }
@@ -188,19 +188,19 @@ async function seedDemoData() {
 
     // Create class calendar
     const classCalendar = await prisma.calendar.upsert({
-      where: {
-      name_type: {
+        where: {
+        name_type: {
         name: "Grade 1-A Calendar",
-        type: "class"
-      }
-      },
-      update: {
-      status: Status.ACTIVE,
-      visibility: "restricted"
-      },
-      create: {
-      name: 'Grade 1-A Calendar',
-      type: "class",
+        type: "CLASS"
+        }
+        },
+        update: {
+        status: Status.ACTIVE,
+        visibility: "restricted"
+        },
+        create: {
+        name: 'Grade 1-A Calendar',
+        type: "CLASS",
       status: Status.ACTIVE,
       visibility: "restricted"
       }
@@ -223,37 +223,37 @@ async function seedDemoData() {
           status: Status.ACTIVE
         }
         }),
-        prisma.event.create({
-        data: {
-          title: 'Fall Break',
-          description: 'Fall semester break',
-          eventType: EventType.HOLIDAY,
-          startDate: new Date('2024-10-14'),
-          endDate: new Date('2024-10-18'),
-          calendarId: masterCalendar.id,
-          priority: "MEDIUM",
-          visibility: "public",
-          status: Status.ACTIVE
-        }
-        }),
-      // Class Group Calendar Events
-        prisma.event.create({
-        data: {
-          title: 'Weekly Assessment',
-          description: 'Regular weekly assessment',
-          eventType: EventType.EXAM,
-          startDate: new Date('2024-09-06'),
-          endDate: new Date('2024-09-06'),
-          calendarId: classGroupCalendar.id,
-          priority: "HIGH",
-          visibility: "restricted",
-          status: Status.ACTIVE
-        }
-        }).then(async (event) => {
+      prisma.event.create({
+      data: {
+        title: 'Fall Break',
+        description: 'Fall semester break',
+        eventType: EventType.HOLIDAY,
+        startDate: new Date('2024-10-14'),
+        endDate: new Date('2024-10-18'),
+        calendarId: masterCalendar.id,
+        priority: "MEDIUM",
+        visibility: "public",
+        status: Status.ACTIVE
+      }
+      }),
+      // Class Group Calendar Events with Recurrence
+      prisma.event.create({
+      data: {
+        title: 'Weekly Assessment',
+        description: 'Regular weekly assessment',
+        eventType: EventType.EXAM,
+        startDate: new Date('2024-09-06'),
+        endDate: new Date('2024-09-06'),
+        calendarId: classGroupCalendar.id,
+        priority: "HIGH",
+        visibility: "restricted",
+        status: Status.ACTIVE
+      }
+      }).then(async (event) => {
       await prisma.recurringEvent.create({
         data: {
         eventId: event.id,
-        frequency: 'weekly',
+        frequency: "weekly",
         interval: 1,
         count: 12,
         daysOfWeek: [5] // Friday
@@ -261,24 +261,24 @@ async function seedDemoData() {
       });
       return event;
       }),
-      // Class Calendar Events
-        prisma.event.create({
-        data: {
-          title: 'Class Meeting',
-          description: 'Weekly class meeting',
-          eventType: EventType.ACADEMIC,
-          startDate: new Date('2024-09-02'),
-          endDate: new Date('2024-09-02'),
-          calendarId: classCalendar.id,
-          priority: "MEDIUM",
-          visibility: "restricted",
-          status: Status.ACTIVE
-        }
-        }).then(async (event) => {
+      // Class Calendar Events with Recurrence
+      prisma.event.create({
+      data: {
+        title: 'Class Meeting',
+        description: 'Weekly class meeting',
+        eventType: EventType.ACADEMIC,
+        startDate: new Date('2024-09-02'),
+        endDate: new Date('2024-09-02'),
+        calendarId: classCalendar.id,
+        priority: "MEDIUM",
+        visibility: "restricted",
+        status: Status.ACTIVE
+      }
+      }).then(async (event) => {
       await prisma.recurringEvent.create({
         data: {
         eventId: event.id,
-        frequency: 'weekly',
+        frequency: "weekly",
         interval: 1,
         daysOfWeek: [1] // Monday
         }
@@ -286,194 +286,7 @@ async function seedDemoData() {
       return event;
       })
     ]);
-      create: {
-        title: 'Fall Break',
-        description: 'Fall semester break',
-        eventType: EventType.HOLIDAY,
-        startDate: new Date('2024-10-14'),
-        endDate: new Date('2024-10-18'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'MEDIUM',
-        visibility: 'ALL'
-      }
-      }),
-      prisma.event.upsert({
-      where: {
-        title_calendarId_eventType: {
-        title: 'Winter Break',
-        calendarId: calendar.id,
-        eventType: EventType.HOLIDAY
-        }
-      },
-      update: {
-        description: 'Winter holiday break',
-        eventType: EventType.HOLIDAY,
-        startDate: new Date('2024-12-23'),
-        endDate: new Date('2025-01-03'),
-        status: Status.ACTIVE,
-        priority: 'MEDIUM',
-        visibility: 'ALL'
-      },
-      create: {
-        title: 'Winter Break',
-        description: 'Winter holiday break',
-        eventType: EventType.HOLIDAY,
-        startDate: new Date('2024-12-23'),
-        endDate: new Date('2025-01-03'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'MEDIUM',
-        visibility: 'ALL'
-      }
-      }),
-      prisma.event.upsert({
-      where: {
-        title_calendarId_eventType: {
-        title: 'Spring Break',
-        calendarId: calendar.id,
-        eventType: EventType.HOLIDAY
-        }
-      },
-      update: {
-        description: 'Spring semester break',
-        eventType: EventType.HOLIDAY,
-        startDate: new Date('2025-03-24'),
-        endDate: new Date('2025-03-28'),
-        status: Status.ACTIVE,
-        priority: 'MEDIUM',
-        visibility: 'ALL'
-      },
-      create: {
-        title: 'Spring Break',
-        description: 'Spring semester break',
-        eventType: EventType.HOLIDAY,
-        startDate: new Date('2025-03-24'),
-        endDate: new Date('2025-03-28'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'MEDIUM',
-        visibility: 'ALL'
-      }
-      }),
-      // Exams
-      prisma.event.upsert({
-      where: {
-        title_calendarId_eventType: {
-        title: 'Fall Midterms',
-        calendarId: calendar.id,
-        eventType: EventType.EXAM
-        }
-      },
-      update: {
-        description: 'Fall semester midterm examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2024-10-07'),
-        endDate: new Date('2024-10-11'),
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      },
-      create: {
-        title: 'Fall Midterms',
-        description: 'Fall semester midterm examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2024-10-07'),
-        endDate: new Date('2024-10-11'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      }
-      }),
-      prisma.event.upsert({
-      where: {
-        title_calendarId_eventType: {
-        title: 'Fall Finals',
-        calendarId: calendar.id,
-        eventType: EventType.EXAM
-        }
-      },
-      update: {
-        description: 'Fall semester final examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2024-12-16'),
-        endDate: new Date('2024-12-20'),
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      },
-      create: {
-        title: 'Fall Finals',
-        description: 'Fall semester final examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2024-12-16'),
-        endDate: new Date('2024-12-20'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      }
-      }),
-      prisma.event.upsert({
-      where: {
-        title_calendarId_eventType: {
-        title: 'Spring Midterms',
-        calendarId: calendar.id,
-        eventType: EventType.EXAM
-        }
-      },
-      update: {
-        description: 'Spring semester midterm examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2025-03-17'),
-        endDate: new Date('2025-03-21'),
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      },
-      create: {
-        title: 'Spring Midterms',
-        description: 'Spring semester midterm examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2025-03-17'),
-        endDate: new Date('2025-03-21'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      }
-      }),
-      prisma.event.upsert({
-      where: {
-        title_calendarId_eventType: {
-        title: 'Spring Finals',
-        calendarId: calendar.id,
-        eventType: EventType.EXAM
-        }
-      },
-      update: {
-        description: 'Spring semester final examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2025-05-26'),
-        endDate: new Date('2025-05-30'),
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      },
-      create: {
-        title: 'Spring Finals',
-        description: 'Spring semester final examinations',
-        eventType: EventType.EXAM,
-        startDate: new Date('2025-05-26'),
-        endDate: new Date('2025-05-30'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
-      }
-      })
-    ]);
+
 
     // 3. Create Demo Terms with Grading Periods and Weeks
     console.log('Creating demo terms...');
@@ -482,7 +295,7 @@ async function seedDemoData() {
         where: {
         name_calendarId: {
           name: "Fall Semester 2024",
-          calendarId: calendar.id
+          calendarId: masterCalendar.id
         }
         },
 
@@ -523,7 +336,7 @@ async function seedDemoData() {
         name: 'Fall Semester 2024',
         startDate: new Date('2024-08-01'),
         endDate: new Date('2024-12-20'),
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
         status: Status.ACTIVE,
         gradingPeriods: {
         create: [
@@ -557,7 +370,7 @@ async function seedDemoData() {
         where: {
         name_calendarId: {
           name: "Spring Semester 2025",
-          calendarId: calendar.id
+          calendarId: masterCalendar.id
         }
         },
 
@@ -598,7 +411,7 @@ async function seedDemoData() {
         name: 'Spring Semester 2025',
         startDate: new Date('2025-01-06'),
         endDate: new Date('2025-05-30'),
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
         status: Status.ACTIVE,
         gradingPeriods: {
         create: [
@@ -638,13 +451,13 @@ async function seedDemoData() {
       update: {
         description: 'K-6 Elementary Education Program',
         status: Status.ACTIVE,
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
       },
       create: {
         name: 'Elementary Education',
         description: 'K-6 Elementary Education Program',
         status: Status.ACTIVE,
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
       }
       }),
       prisma.program.upsert({
@@ -652,13 +465,13 @@ async function seedDemoData() {
       update: {
         description: 'Grades 7-9 Middle School Education',
         status: Status.ACTIVE,
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
       },
       create: {
         name: 'Middle School Program',
         description: 'Grades 7-9 Middle School Education',
         status: Status.ACTIVE,
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
       }
       }),
       prisma.program.upsert({
@@ -666,13 +479,13 @@ async function seedDemoData() {
       update: {
         description: 'Grades 10-12 High School Education',
         status: Status.ACTIVE,
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
       },
       create: {
         name: 'High School Program',
         description: 'Grades 10-12 High School Education',
         status: Status.ACTIVE,
-        calendarId: calendar.id,
+        calendarId: masterCalendar.id,
       }
       })
     ]);
@@ -865,7 +678,6 @@ async function seedDemoData() {
       
       return prisma.timetable.upsert({
         where: {
-        // Using composite unique identifier
         termId_classGroupId_classId: {
           termId: terms[0].id,
           classGroupId: classGroup.id,
@@ -893,72 +705,12 @@ async function seedDemoData() {
       throw new Error("No teachers found in the database");
     }
 
-    console.log('Creating teacher assignments...');
-    await Promise.all([
-      prisma.teacherSubject.upsert({
-      where: {
-        teacherId_subjectId: {
-        teacherId: teachers[0].id,
-        subjectId: subjects[0].id
-        }
-      },
-      update: { status: Status.ACTIVE },
-      create: {
-        teacherId: teachers[0].id,
-        subjectId: subjects[0].id,
-        status: Status.ACTIVE
-      }
-      }),
-      prisma.teacherSubject.upsert({
-      where: {
-        teacherId_subjectId: {
-        teacherId: teachers[0].id,
-        subjectId: subjects[1].id
-        }
-      },
-      update: { status: Status.ACTIVE },
-      create: {
-        teacherId: teachers[0].id,
-        subjectId: subjects[1].id,
-        status: Status.ACTIVE
-      }
-      }),
-      prisma.teacherSubject.upsert({
-      where: {
-        teacherId_subjectId: {
-        teacherId: teachers[0].id,
-        subjectId: subjects[2].id
-        }
-      },
-      update: { status: Status.ACTIVE },
-      create: {
-        teacherId: teachers[0].id,
-        subjectId: subjects[2].id,
-        status: Status.ACTIVE
-      }
-      }),
-      prisma.teacherClass.upsert({
-      where: {
-        teacherId_classId: {
-        teacherId: teachers[0].id,
-        classId: classes[0].id
-        }
-      },
-      update: { status: Status.ACTIVE },
-      create: {
-        teacherId: teachers[0].id,
-        classId: classes[0].id,
-        status: Status.ACTIVE
-      }
-      })
-    ]);
-
     // Create periods for each timetable
     console.log('Creating periods...');
-    for (const [index, timetable] of timetables.entries()) {
-      const dayOffset = index + 1; // Use different days (1 = Monday, 2 = Tuesday, etc.)
-      const teacherIndex = index % teachers.length; // Rotate through available teachers
-      const classroomIndex = index % classrooms.length; // Rotate through available classrooms
+    for (const timetable of timetables) {
+      const dayOffset = timetables.indexOf(timetable) + 1; // Use different days (1 = Monday, 2 = Tuesday, etc.)
+      const teacherIndex = timetables.indexOf(timetable) % teachers.length; // Rotate through available teachers
+      const classroomIndex = timetables.indexOf(timetable) % classrooms.length; // Rotate through available classrooms
       await Promise.all([
       prisma.period.upsert({
         where: {
@@ -979,49 +731,10 @@ async function seedDemoData() {
         timetable: { connect: { id: timetable.id } },
         teacher: { connect: { id: teachers[teacherIndex].id } }
         }
-      }),
-      prisma.period.upsert({
-        where: {
-        timetableId_dayOfWeek_startTime: {
-          timetableId: timetable.id,
-          dayOfWeek: dayOffset,
-          startTime: new Date('2024-08-01T09:00:00Z')
-        }
-        },
-        update: {},
-        create: {
-        startTime: new Date('2024-08-01T09:00:00Z'),
-        endTime: new Date('2024-08-01T10:00:00Z'),
-        dayOfWeek: dayOffset,
-        durationInMinutes: 60,
-        subject: { connect: { id: subjects[1].id } },
-        classroom: { connect: { id: classrooms[(classroomIndex + 1) % classrooms.length].id } },
-        timetable: { connect: { id: timetable.id } },
-        teacher: { connect: { id: teachers[(teacherIndex + 1) % teachers.length].id } }
-        }
-      }),
-      prisma.period.upsert({
-        where: {
-        timetableId_dayOfWeek_startTime: {
-          timetableId: timetable.id,
-          dayOfWeek: dayOffset,
-          startTime: new Date('2024-08-01T10:00:00Z')
-        }
-        },
-        update: {},
-        create: {
-        startTime: new Date('2024-08-01T10:00:00Z'),
-        endTime: new Date('2024-08-01T11:00:00Z'),
-        dayOfWeek: dayOffset,
-        durationInMinutes: 60,
-        subject: { connect: { id: subjects[2].id } },
-        classroom: { connect: { id: classrooms[(classroomIndex + 2) % classrooms.length].id } },
-        timetable: { connect: { id: timetable.id } },
-        teacher: { connect: { id: teachers[(teacherIndex + 2) % teachers.length].id } }
-        }
       })
       ]);
     }
+
 
     // Create Class Activities
     console.log('Creating demo class activities...');

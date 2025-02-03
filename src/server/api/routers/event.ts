@@ -1,17 +1,17 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { EventType, Priority, Status, Visibility } from "@prisma/client";
+import { Status } from "@prisma/client";
 
 const eventSchema = z.object({
 	title: z.string(),
 	description: z.string().optional(),
-	eventType: z.nativeEnum(EventType),
+	eventType: z.enum(['academic', 'holiday', 'exam', 'activity', 'other']),
 	startDate: z.date(),
 	endDate: z.date(),
 	calendarId: z.string(),
-	priority: z.nativeEnum(Priority).optional(),
-	visibility: z.nativeEnum(Visibility).optional(),
+	priority: z.enum(['high', 'medium', 'low']).optional(),
+	visibility: z.enum(['public', 'restricted']).optional(),
 	recurrence: z.any().optional(),
 	metadata: z.any().optional(),
 	status: z.nativeEnum(Status).optional(),
@@ -23,7 +23,7 @@ export const eventRouter = createTRPCRouter({
 			calendarId: z.string(),
 			startDate: z.date().optional(),
 			endDate: z.date().optional(),
-			eventType: z.nativeEnum(EventType).optional(),
+			eventType: z.enum(['academic', 'holiday', 'exam', 'activity', 'other']).optional(),
 		}))
 		.query(async ({ ctx, input }) => {
 			const { calendarId, startDate, endDate, eventType } = input;

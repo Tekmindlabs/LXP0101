@@ -60,13 +60,13 @@ model ActivityLog {
 
 // Calendar Models
 model Calendar {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
-  type        String   // master, class-group, class
-  status      Status   @default(ACTIVE)
-  visibility  String   @default("public")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  type        CalendarType // Changed from String to CalendarType
+  status      Status       @default(ACTIVE)
+  visibility  String       @default("public")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   events      Event[]
   programs    Program[]
   terms       Term[]
@@ -671,6 +671,13 @@ enum ParticipantRole {
 enum TeacherType {
   CLASS
   SUBJECT
+}
+
+enum CalendarType {
+  MASTER
+  CLASS_GROUP
+  CLASS
+  PRIMARY
 }
 
 // Knowledge Base Models

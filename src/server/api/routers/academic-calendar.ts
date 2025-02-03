@@ -11,10 +11,10 @@ export const academicCalendarRouter = createTRPCRouter({
 			description: z.string().optional(),
 			startDate: z.date(),
 			endDate: z.date(),
-			type: z.enum(['PRIMARY', 'SECONDARY', 'EXAM', 'ACTIVITY']).default('PRIMARY'),
+			type: z.enum(['master', 'class-group', 'class']).default('master'),
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
 			isDefault: z.boolean().default(false),
-			visibility: z.enum(['ALL', 'STAFF', 'STUDENTS', 'PARENTS']).default('ALL'),
+			visibility: z.enum(['public', 'restricted']).default('public'),
 			metadata: z.any().optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
@@ -55,9 +55,9 @@ export const academicCalendarRouter = createTRPCRouter({
 			description: z.string().optional(),
 			startDate: z.date().optional(),
 			endDate: z.date().optional(),
-			type: z.enum(['PRIMARY', 'SECONDARY', 'EXAM', 'ACTIVITY']).optional(),
+			type: z.enum(['master', 'class-group', 'class']).optional(),
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
-			visibility: z.enum(['ALL', 'STAFF', 'STUDENTS', 'PARENTS']).optional(),
+			visibility: z.enum(['public', 'restricted']).optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...data } = input;

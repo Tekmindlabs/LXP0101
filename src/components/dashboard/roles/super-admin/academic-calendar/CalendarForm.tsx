@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { Calendar as CalendarModel, CalendarType, Status, Visibility } from "@prisma/client";
+import { Calendar as CalendarModel, Status, Visibility } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,7 @@ export const CalendarForm = ({ calendar, onSubmit }: CalendarFormProps) => {
 	const [formData, setFormData] = useState<Partial<CalendarModel>>({
 		name: calendar?.name || '',
 		description: calendar?.description || '',
-		type: calendar?.type || CalendarType.PRIMARY,
+		type: calendar?.type || 'master',
 		visibility: calendar?.visibility || Visibility.ALL,
 		status: calendar?.status || Status.ACTIVE,
 		isDefault: calendar?.isDefault || false,
@@ -76,7 +76,7 @@ export const CalendarForm = ({ calendar, onSubmit }: CalendarFormProps) => {
 					<Label>Type</Label>
 					<Select
 						value={formData.type}
-						onValueChange={(value: CalendarType) =>
+						onValueChange={(value: string) =>
 							setFormData({ ...formData, type: value })
 						}
 					>
@@ -84,7 +84,7 @@ export const CalendarForm = ({ calendar, onSubmit }: CalendarFormProps) => {
 							<SelectValue placeholder="Select type" />
 						</SelectTrigger>
 						<SelectContent>
-							{Object.values(CalendarType).map((type) => (
+							{['master', 'class-group', 'class'].map((type) => (
 								<SelectItem key={type} value={type}>
 									{type}
 								</SelectItem>

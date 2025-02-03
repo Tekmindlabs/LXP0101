@@ -1,7 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { type Event, EventType, Priority, Status, Visibility } from "@prisma/client"
+import { type Event, Status } from "@prisma/client"
+
+type EventType = 'academic' | 'holiday' | 'exam' | 'activity' | 'other'
+type Priority = 'high' | 'medium' | 'low'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,13 +34,13 @@ export const EventForm = ({ event, calendarId, onSubmit }: EventFormProps) => {
   const [formData, setFormData] = useState<Partial<Event> & { recurrencePattern?: RecurrencePattern }>({
     title: event?.title || "",
     description: event?.description || "",
-    eventType: event?.eventType || EventType.ACADEMIC,
+    eventType: event?.eventType || 'academic',
     startDate: event?.startDate || new Date(),
     endDate: event?.endDate || new Date(),
     calendarId: calendarId,
     status: event?.status || Status.ACTIVE,
-    priority: event?.priority || Priority.MEDIUM,
-    visibility: event?.visibility || Visibility.ALL,
+    priority: event?.priority || 'medium',
+    visibility: event?.visibility || 'public',
     recurrence: event?.recurrence || null,
   })
 
@@ -80,11 +83,11 @@ export const EventForm = ({ event, calendarId, onSubmit }: EventFormProps) => {
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
-              {Object.values(EventType).map((type) => (
+                {['academic', 'holiday', 'exam', 'activity', 'other'].map((type) => (
                 <SelectItem key={type} value={type}>
                   {type}
                 </SelectItem>
-              ))}
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -99,11 +102,11 @@ export const EventForm = ({ event, calendarId, onSubmit }: EventFormProps) => {
               <SelectValue placeholder="Select priority" />
             </SelectTrigger>
             <SelectContent>
-              {Object.values(Priority).map((priority) => (
+                {['high', 'medium', 'low'].map((priority) => (
                 <SelectItem key={priority} value={priority}>
                   {priority}
                 </SelectItem>
-              ))}
+                ))}
             </SelectContent>
           </Select>
         </div>
