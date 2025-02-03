@@ -1,89 +1,56 @@
--- Create ENUM types
-CREATE TYPE "Status" AS ENUM ('ACTIVE', 'INACTIVE', 'ARCHIVED');
-CREATE TYPE "CalendarType" AS ENUM ('PRIMARY', 'SECONDARY', 'EXAM', 'ACTIVITY');
-CREATE TYPE "Visibility" AS ENUM ('ALL', 'STAFF', 'STUDENTS', 'PARENTS');
-CREATE TYPE "Priority" AS ENUM ('HIGH', 'MEDIUM', 'LOW');
-CREATE TYPE "EventType" AS ENUM ('ACADEMIC', 'HOLIDAY', 'EXAM', 'ACTIVITY', 'OTHER');
+-- Drop existing calendar-related tables if they exist
+DROP TABLE IF EXISTS "RecurringEvent";
+DROP TABLE IF EXISTS "Event";
+DROP TABLE IF EXISTS "Calendar";
 
--- Create tables
+-- Create new tables with updated schema
 CREATE TABLE "Calendar" (
-	"id" TEXT NOT NULL,
+	"id" TEXT NOT NULL PRIMARY KEY,
 	"name" TEXT NOT NULL,
-	"description" TEXT,
-	"startDate" TIMESTAMP(3) NOT NULL,
-	"endDate" TIMESTAMP(3) NOT NULL,
-	"type" "CalendarType" NOT NULL DEFAULT 'PRIMARY',
-	"status" "Status" NOT NULL DEFAULT 'ACTIVE',
-	"isDefault" BOOLEAN NOT NULL DEFAULT false,
-	"visibility" "Visibility" NOT NULL DEFAULT 'ALL',
+	"type" TEXT NOT NULL,
+	"status" TEXT NOT NULL DEFAULT 'active',
+	"visibility" TEXT NOT NULL DEFAULT 'public',
 	"metadata" JSONB,
 	"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	"updatedAt" TIMESTAMP(3) NOT NULL,
-	CONSTRAINT "Calendar_pkey" PRIMARY KEY ("id")
+	"updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 CREATE TABLE "Event" (
-	"id" TEXT NOT NULL,
+	"id" TEXT NOT NULL PRIMARY KEY,
 	"title" TEXT NOT NULL,
 	"description" TEXT,
-	"eventType" "EventType" NOT NULL,
+	"eventType" TEXT NOT NULL,
 	"startDate" TIMESTAMP(3) NOT NULL,
 	"endDate" TIMESTAMP(3) NOT NULL,
-	"calendarId" TEXT NOT NULL,
-	"status" "Status" NOT NULL DEFAULT 'ACTIVE',
-	"priority" "Priority" NOT NULL DEFAULT 'MEDIUM',
-	"visibility" "Visibility" NOT NULL DEFAULT 'ALL',
-	"recurrence" JSONB,
+	"priority" TEXT,
+	"visibility" TEXT NOT NULL DEFAULT 'public',
+	"status" TEXT NOT NULL DEFAULT 'active',
 	"metadata" JSONB,
-	"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	"updatedAt" TIMESTAMP(3) NOT NULL,
-	CONSTRAINT "Event_pkey" PRIMARY KEY ("id")
-);
-
-CREATE TABLE "Program" (
-	"id" TEXT NOT NULL,
-	"name" TEXT NOT NULL,
-	"description" TEXT,
-	"status" "Status" NOT NULL DEFAULT 'ACTIVE',
 	"calendarId" TEXT NOT NULL,
 	"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	"updatedAt" TIMESTAMP(3) NOT NULL,
-	CONSTRAINT "Program_pkey" PRIMARY KEY ("id")
+	CONSTRAINT "Event_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE CASCADE
 );
 
-CREATE TABLE "Term" (
-	"id" TEXT NOT NULL,
-	"name" TEXT NOT NULL,
-	"calendarId" TEXT NOT NULL,
-	"startDate" TIMESTAMP(3) NOT NULL,
-	"endDate" TIMESTAMP(3) NOT NULL,
-	"status" "Status" NOT NULL DEFAULT 'ACTIVE',
+CREATE TABLE "RecurringEvent" (
+	"id" TEXT NOT NULL PRIMARY KEY,
+	"eventId" TEXT NOT NULL,
+	"frequency" TEXT NOT NULL,
+	"interval" INTEGER NOT NULL DEFAULT 1,
+	"endDate" TIMESTAMP(3),
+	"count" INTEGER,
+	"daysOfWeek" INTEGER[],
 	"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	"updatedAt" TIMESTAMP(3) NOT NULL,
-	CONSTRAINT "Term_pkey" PRIMARY KEY ("id")
+	CONSTRAINT "RecurringEvent_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE CASCADE
 );
 
--- Add foreign key constraints
-ALTER TABLE "Event" ADD CONSTRAINT "Event_calendarId_fkey" 
-	FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE "Program" ADD CONSTRAINT "Program_calendarId_fkey" 
-	FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
-ALTER TABLE "Term" ADD CONSTRAINT "Term_calendarId_fkey" 
-	FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- Create indexes for better query performance
+CREATE INDEX "Calendar_type_status_idx" ON "Calendar"("type", "status");
+CREATE INDEX "Event_calendarId_idx" ON "Event"("calendarId");
+CREATE INDEX "Event_startDate_endDate_idx" ON "Event"("startDate", "endDate");
+CREATE INDEX "RecurringEvent_eventId_idx" ON "RecurringEvent"("eventId");
 
 -- Add unique constraints
-ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_name_type_key" UNIQUE ("name", "type");
-ALTER TABLE "Program" ADD CONSTRAINT "Program_name_key" UNIQUE ("name");
-ALTER TABLE "Term" ADD CONSTRAINT "Term_name_calendarId_key" UNIQUE ("name", "calendarId");
-ALTER TABLE "Event" ADD CONSTRAINT "Event_title_calendarId_key" UNIQUE ("title", "calendarId");
+CREATE UNIQUE INDEX "Calendar_name_type_key" ON "Calendar"("name", "type");
 
--- Create indexes
-CREATE INDEX "Calendar_type_idx" ON "Calendar"("type");
-CREATE INDEX "Calendar_status_idx" ON "Calendar"("status");
-CREATE INDEX "Calendar_isDefault_idx" ON "Calendar"("isDefault");
-CREATE INDEX "Event_calendarId_idx" ON "Event"("calendarId");
-CREATE INDEX "Event_eventType_idx" ON "Event"("eventType");
-CREATE INDEX "Event_status_idx" ON "Event"("status");
-CREATE INDEX "Event_startDate_endDate_idx" ON "Event"("startDate", "endDate");

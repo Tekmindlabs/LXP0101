@@ -1,137 +1,86 @@
-import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { TRPCError } from "@trpc/server";
-import { CalendarType, Status, Visibility } from "@prisma/client";
+import { z } from 'zod';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { calendarService } from '@/lib/calendar/calendar-service';
 
-const calendarSchema = z.object({
-	name: z.string(),
+const eventSchema = z.object({
+	title: z.string(),
 	description: z.string().optional(),
+	eventType: z.string(),
 	startDate: z.date(),
 	endDate: z.date(),
-	type: z.nativeEnum(CalendarType),
-	visibility: z.nativeEnum(Visibility),
-	isDefault: z.boolean().optional(),
-	status: z.nativeEnum(Status).optional(),
+	calendarId: z.string(),
+	priority: z.string().optional(),
+	visibility: z.string().optional(),
+	metadata: z.record(z.any()).optional(),
+	status: z.string().optional(),
+	recurrence: z.object({
+		frequency: z.string(),
+		interval: z.number().optional(),
+		endDate: z.date().optional(),
+		count: z.number().optional(),
+		daysOfWeek: z.array(z.number()).optional()
+	}).optional()
 });
 
 export const calendarRouter = createTRPCRouter({
-	getAllCalendars: protectedProcedure.query(async ({ ctx }) => {
-		return ctx.prisma.calendar.findMany({
-			include: {
-				events: true,
-			},
-			orderBy: {
-				createdAt: 'desc',
-			},
-		});
-	}),
-
-	getCalendarById: protectedProcedure
-		.input(z.object({ id: z.string() }))
-		.query(async ({ ctx, input }) => {
-			const calendar = await ctx.prisma.calendar.findUnique({
-				where: { id: input.id },
-				include: {
-					events: true,
-					programs: true,
-					terms: true,
-				},
-			});
-
-			if (!calendar) {
-				throw new TRPCError({
-					code: 'NOT_FOUND',
-					message: 'Calendar not found',
-				});
-			}
-
-			return calendar;
+	getCalendars: protectedProcedure
+		.input(z.object({
+			type: z.string().optional(),
+			status: z.string().optional(),
+			visibility: z.string().optional(),
+			dateRange: z.object({
+				from: z.date(),
+				to: z.date()
+			}).optional()
+		}))
+		.query(({ input }) => {
+			return calendarService.getCalendars(input);
 		}),
 
 	createCalendar: protectedProcedure
-		.input(calendarSchema)
-		.mutation(async ({ ctx, input }) => {
-			// If this calendar is set as default, unset any existing default calendar
-			if (input.isDefault) {
-				await ctx.prisma.calendar.updateMany({
-					where: { isDefault: true },
-					data: { isDefault: false },
-				});
-			}
-
-			return ctx.prisma.calendar.create({
-				data: {
-					...input,
-					status: input.status || Status.ACTIVE,
-				},
-			});
+		.input(z.object({
+			name: z.string(),
+			type: z.string(),
+			visibility: z.string().optional()
+		}))
+		.mutation(({ input }) => {
+			return calendarService.createCalendar(input);
 		}),
 
-	updateCalendar: protectedProcedure
+	getCalendarEvents: protectedProcedure
+		.input(z.object({
+			calendarId: z.string(),
+			filters: z.object({
+				status: z.string().optional(),
+				visibility: z.string().optional(),
+				dateRange: z.object({
+					from: z.date(),
+					to: z.date()
+				}).optional()
+			}).optional()
+		}))
+		.query(({ input }) => {
+			return calendarService.getCalendarEvents(input.calendarId, input.filters);
+		}),
+
+	createEvent: protectedProcedure
+		.input(eventSchema)
+		.mutation(({ input }) => {
+			return calendarService.createEvent(input);
+		}),
+
+	updateEvent: protectedProcedure
 		.input(z.object({
 			id: z.string(),
-			data: calendarSchema.partial(),
+			data: eventSchema.partial()
 		}))
-		.mutation(async ({ ctx, input }) => {
-			const { id, data } = input;
-
-			// If this calendar is being set as default, unset any existing default calendar
-			if (data.isDefault) {
-				await ctx.prisma.calendar.updateMany({
-					where: { 
-						isDefault: true,
-						id: { not: id },
-					},
-					data: { isDefault: false },
-				});
-			}
-
-			return ctx.prisma.calendar.update({
-				where: { id },
-				data,
-			});
+		.mutation(({ input }) => {
+			return calendarService.updateEvent(input.id, input.data);
 		}),
 
-	deleteCalendar: protectedProcedure
+	deleteEvent: protectedProcedure
 		.input(z.string())
-		.mutation(async ({ ctx, input }) => {
-			const calendar = await ctx.prisma.calendar.findUnique({
-				where: { id: input },
-				include: {
-					events: true,
-					programs: true,
-				},
-			});
-
-			if (!calendar) {
-				throw new TRPCError({
-					code: 'NOT_FOUND',
-					message: 'Calendar not found',
-				});
-			}
-
-			if (calendar.isDefault) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Cannot delete default calendar',
-				});
-			}
-
-			if (calendar.programs.length > 0) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Cannot delete calendar with associated programs',
-				});
-			}
-
-			// Delete all events first
-			await ctx.prisma.event.deleteMany({
-				where: { calendarId: input },
-			});
-
-			// Then delete the calendar
-			return ctx.prisma.calendar.delete({
-				where: { id: input },
-			});
-		}),
+		.mutation(({ input }) => {
+			return calendarService.deleteEvent(input);
+		})
 });

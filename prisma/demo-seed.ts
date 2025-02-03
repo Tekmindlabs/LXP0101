@@ -1,4 +1,4 @@
-const { PrismaClient, UserType, Status, EventType, ActivityType, ResourceType } = require('@prisma/client');
+import { PrismaClient, UserType, Status, EventType, ActivityType, ResourceType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -137,96 +137,155 @@ async function seedDemoData() {
     // Create users first
     await createUsers();
 
-    // 1. Create Demo Calendar
-    console.log('Creating demo calendar...');
-    const calendar = await prisma.calendar.upsert({
+    // 1. Create Demo Calendars
+    console.log('Creating demo calendars...');
+    const masterCalendar = await prisma.calendar.upsert({
       where: {
-        name_type: {
-          name: "2024-2025 Academic Calendar",
-          type: "PRIMARY"
-        }
+      name_type: {
+        name: "2024-2025 Master Calendar",
+        type: "master"
+      }
       },
       update: {
-      description: 'Main academic calendar for 2024-2025',
-      startDate: new Date('2024-08-01'),
-      endDate: new Date('2025-05-31'),
       status: Status.ACTIVE,
-      isDefault: true,
-      visibility: 'ALL',
+      visibility: "public",
       metadata: {
         academicYear: '2024-2025',
-        semester: 'BOTH',
         terms: 2
       }
       },
       create: {
-      name: '2024-2025 Academic Calendar',
-      description: 'Main academic calendar for 2024-2025',
-      startDate: new Date('2024-08-01'),
-      endDate: new Date('2025-05-31'),
-      type: 'PRIMARY',
+      name: '2024-2025 Master Calendar',
+      type: "master",
       status: Status.ACTIVE,
-      isDefault: true,
-      visibility: 'ALL',
+      visibility: "public",
       metadata: {
         academicYear: '2024-2025',
-        semester: 'BOTH',
         terms: 2
       }
       }
     });
 
-    // 2. Create Demo Events
-    console.log('Creating demo events...');
-    await Promise.all([
-      // Academic Events
-      prisma.event.upsert({
+    // Create class group calendar
+    const classGroupCalendar = await prisma.calendar.upsert({
       where: {
-        title_calendarId_eventType: {
-        title: 'First Day of School',
-        calendarId: calendar.id,
-        eventType: EventType.ACADEMIC
-        }
+      name_type: {
+        name: "Grade 1 Calendar",
+        type: "class-group"
+      }
       },
       update: {
-        description: 'Opening ceremony and first day of classes',
-        eventType: EventType.ACADEMIC,
-        startDate: new Date('2024-08-01'),
-        endDate: new Date('2024-08-01'),
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
+      status: Status.ACTIVE,
+      visibility: "public"
       },
       create: {
-        title: 'First Day of School',
-        description: 'Opening ceremony and first day of classes',
-        eventType: EventType.ACADEMIC,
-        startDate: new Date('2024-08-01'),
-        endDate: new Date('2024-08-01'),
-        calendarId: calendar.id,
-        status: Status.ACTIVE,
-        priority: 'HIGH',
-        visibility: 'ALL'
+      name: 'Grade 1 Calendar',
+      type: "class-group",
+      status: Status.ACTIVE,
+      visibility: "public"
       }
-      }),
-      // Holidays
-      prisma.event.upsert({
+    });
+
+    // Create class calendar
+    const classCalendar = await prisma.calendar.upsert({
       where: {
-        title_calendarId_eventType: {
-        title: 'Fall Break',
-        calendarId: calendar.id,
-        eventType: EventType.HOLIDAY
-        }
+      name_type: {
+        name: "Grade 1-A Calendar",
+        type: "class"
+      }
       },
       update: {
-        description: 'Fall semester break',
-        eventType: EventType.HOLIDAY,
-        startDate: new Date('2024-10-14'),
-        endDate: new Date('2024-10-18'),
-        status: Status.ACTIVE,
-        priority: 'MEDIUM',
-        visibility: 'ALL'
+      status: Status.ACTIVE,
+      visibility: "restricted"
       },
+      create: {
+      name: 'Grade 1-A Calendar',
+      type: "class",
+      status: Status.ACTIVE,
+      visibility: "restricted"
+      }
+    });
+
+    // 2. Create Demo Events
+    console.log('Creating demo events...');
+    const events = await Promise.all([
+      // Master Calendar Events
+        prisma.event.create({
+        data: {
+          title: 'First Day of School',
+          description: 'Opening ceremony and first day of classes',
+          eventType: EventType.ACADEMIC,
+          startDate: new Date('2024-08-01'),
+          endDate: new Date('2024-08-01'),
+          calendarId: masterCalendar.id,
+          priority: "HIGH",
+          visibility: "public",
+          status: Status.ACTIVE
+        }
+        }),
+        prisma.event.create({
+        data: {
+          title: 'Fall Break',
+          description: 'Fall semester break',
+          eventType: EventType.HOLIDAY,
+          startDate: new Date('2024-10-14'),
+          endDate: new Date('2024-10-18'),
+          calendarId: masterCalendar.id,
+          priority: "MEDIUM",
+          visibility: "public",
+          status: Status.ACTIVE
+        }
+        }),
+      // Class Group Calendar Events
+        prisma.event.create({
+        data: {
+          title: 'Weekly Assessment',
+          description: 'Regular weekly assessment',
+          eventType: EventType.EXAM,
+          startDate: new Date('2024-09-06'),
+          endDate: new Date('2024-09-06'),
+          calendarId: classGroupCalendar.id,
+          priority: "HIGH",
+          visibility: "restricted",
+          status: Status.ACTIVE
+        }
+        }).then(async (event) => {
+      await prisma.recurringEvent.create({
+        data: {
+        eventId: event.id,
+        frequency: 'weekly',
+        interval: 1,
+        count: 12,
+        daysOfWeek: [5] // Friday
+        }
+      });
+      return event;
+      }),
+      // Class Calendar Events
+        prisma.event.create({
+        data: {
+          title: 'Class Meeting',
+          description: 'Weekly class meeting',
+          eventType: EventType.ACADEMIC,
+          startDate: new Date('2024-09-02'),
+          endDate: new Date('2024-09-02'),
+          calendarId: classCalendar.id,
+          priority: "MEDIUM",
+          visibility: "restricted",
+          status: Status.ACTIVE
+        }
+        }).then(async (event) => {
+      await prisma.recurringEvent.create({
+        data: {
+        eventId: event.id,
+        frequency: 'weekly',
+        interval: 1,
+        daysOfWeek: [1] // Monday
+        }
+      });
+      return event;
+      })
+    ]);
       create: {
         title: 'Fall Break',
         description: 'Fall semester break',
